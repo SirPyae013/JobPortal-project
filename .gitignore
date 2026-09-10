@@ -1,0 +1,14 @@
+node_modules/
+.venv/
+build/
+dist/
+coverage/
+backend/db.sqlite3
+backend/media/
+backend/staticfiles/
+**/__pycache__/
+*.py[cod]
+.DS_Store
+*.log
+.env*
+!.env.example

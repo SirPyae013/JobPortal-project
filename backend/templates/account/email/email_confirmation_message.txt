@@ -1,0 +1,12 @@
+Verify your email for Job Portal
+
+Confirm this email address to finish setting up your account:
+
+{{ activate_url }}
+
+This link expires in {{ verification_expiry_days }} day. After verifying, you can sign in to Job Portal.
+
+If you didn't create an account, you can ignore this message.
+
+Job Portal
+Campus to career

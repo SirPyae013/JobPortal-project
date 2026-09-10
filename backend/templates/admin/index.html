@@ -1,0 +1,15 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+{% block content %}
+<div id="content-main">
+  <h1>Operational overview</h1>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0 28px">
+    {% for label, value in job_portal_stats.items %}<div style="padding:16px;background:#fff;border:1px solid #ddd;border-radius:8px"><strong style="display:block;font-size:24px">{{ value }}</strong><span>{{ label|title }}</span></div>{% endfor %}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-bottom:28px">
+    <div class="module"><table><caption>Applications by status</caption>{% for label, value in application_statuses.items %}<tr><th>{{ label }}</th><td>{{ value }}</td></tr>{% endfor %}</table></div>
+    <div class="module"><table><caption>Recent activity</caption>{% for item in recent_activity %}<tr><th>{{ item.title }}</th><td>{{ item.recipient.email }}<br><small>{{ item.created_at }}</small></td></tr>{% empty %}<tr><td>No activity yet.</td></tr>{% endfor %}</table></div>
+  </div>
+  {% if app_list %}{% for app in app_list %}<div class="app-{{ app.app_label }} module"><table><caption><a href="{{ app.app_url }}">{{ app.name }}</a></caption>{% for model in app.models %}<tr><th scope="row">{% if model.admin_url %}<a href="{{ model.admin_url }}">{{ model.name }}</a>{% else %}{{ model.name }}{% endif %}</th><td>{% if model.add_url %}<a href="{{ model.add_url }}" class="addlink">{% translate 'Add' %}</a>{% endif %}</td><td>{% if model.admin_url %}<a href="{{ model.admin_url }}" class="changelink">{% translate 'View' %}</a>{% endif %}</td></tr>{% endfor %}</table></div>{% endfor %}{% endif %}
+</div>
+{% endblock %}
