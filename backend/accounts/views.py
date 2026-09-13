@@ -3,18 +3,40 @@ from allauth.account.models import EmailAddress
 from dj_rest_auth.registration.serializers import ResendEmailVerificationSerializer
 from dj_rest_auth.registration.views import SocialLoginView
 from django.conf import settings
-from django.http import FileResponse
+from core.files import private_resume_response
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, permissions, status
+from django.db.models import Exists, OuterRef
+from rest_framework import generics, permissions, status, serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 
-from .models import StudentProfile
-from .permissions import IsApprovedRecruiter, IsStudent
-from .serializers import CurrentUserSerializer, RegisterSerializer, StudentProfileSerializer
+from .models import RecruiterProfile, StudentProfile
+from .permissions import IsApprovedRecruiter, IsRecruiter, IsStudent
+from .serializers import CurrentUserSerializer, RecruiterProfileSerializer, RegisterSerializer, StudentProfileSerializer
 from .throttles import AuthEmailIPThrottle, VerificationEmailThrottle
+from .verification import verify_code
+
+
+class VerifyCodeSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.RegexField(r"^[0-9]{6}$", min_length=6, max_length=6)
+
+
+class VerifyEmailCodeView(generics.GenericAPIView):
+    serializer_class = VerifyCodeSerializer
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+    throttle_classes = [AuthEmailIPThrottle]
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # Return outside the transaction so failed attempts remain persisted.
+        if not verify_code(serializer.validated_data["email"].strip().lower(), serializer.validated_data["code"]):
+            return Response({"detail": "Invalid or expired code. After five incorrect attempts, request a new code."}, status=400)
+        return Response({"detail": "Email verified. You can now sign in."})
 
 
 class RegisterView(generics.CreateAPIView):
@@ -28,7 +50,7 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         message = (
-            "Registration received. Check your email to verify your account."
+            "Registration received. Enter the six-digit code sent to your email."
             if settings.EMAIL_VERIFICATION_ENABLED
             else "Registration successful. You can sign in now."
         )
@@ -53,7 +75,7 @@ class ResendVerificationView(generics.GenericAPIView):
         if address:
             address.send_confirmation(request)
         return Response({
-            "detail": "If an unverified account exists, a verification email has been sent."
+            "detail": "If an unverified account exists, a verification code has been sent. Use the latest code; new codes can be requested once a minute."
         })
 
 
@@ -76,6 +98,14 @@ class StudentProfileMeView(generics.RetrieveUpdateAPIView):
         return self.request.user.student_profile
 
 
+class RecruiterProfileMeView(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsRecruiter]
+    serializer_class = RecruiterProfileSerializer
+
+    def get_object(self):
+        return get_object_or_404(RecruiterProfile, user=self.request.user)
+
+
 class StudentDirectoryView(generics.ListAPIView):
     serializer_class = StudentProfileSerializer
     permission_classes = [IsApprovedRecruiter]
@@ -85,8 +115,10 @@ class StudentDirectoryView(generics.ListAPIView):
 
     def get_queryset(self):
         return StudentProfile.objects.filter(
-            user__emailaddress__verified=True,
-        ).exclude(name="").exclude(university="").exclude(graduation_year=None).exclude(bio="").exclude(resume="").filter(skills__isnull=False).distinct().order_by("name")
+            user__is_active=True, user__role="student", user__is_staff=False, user__is_superuser=False,
+        ).annotate(current_email_verified=Exists(
+            EmailAddress.objects.filter(user_id=OuterRef("user_id"), email__iexact=OuterRef("user__email"), verified=True)
+        )).filter(current_email_verified=True).select_related("user").prefetch_related("skills").order_by("name", "id")
 
 
 class StudentResumeView(APIView):
@@ -95,4 +127,4 @@ class StudentResumeView(APIView):
     @extend_schema(responses={(200, "application/pdf"): OpenApiTypes.BINARY})
     def get(self, request, pk):
         profile = get_object_or_404(StudentDirectoryView().get_queryset(), pk=pk)
-        return FileResponse(profile.resume.open("rb"), as_attachment=True, filename=f"{profile.name}-resume.pdf")
+        return private_resume_response(profile.resume, f"{profile.name}-profile-resume.pdf")

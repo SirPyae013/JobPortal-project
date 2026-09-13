@@ -2,7 +2,6 @@ import logging
 from smtplib import SMTPException
 
 from allauth.account.adapter import DefaultAccountAdapter
-from django.conf import settings
 
 from .email_delivery import EmailDeliveryUnavailable
 
@@ -10,11 +9,11 @@ logger = logging.getLogger(__name__)
 
 
 class AccountAdapter(DefaultAccountAdapter):
-    def get_email_confirmation_url(self, request, emailconfirmation):
-        return f"{settings.FRONTEND_URL.rstrip('/')}/verify-email/{emailconfirmation.key}"
+    def send_confirmation_mail(self, request, emailconfirmation, signup):
+        from .verification import send_verification_code
+        send_verification_code(request, emailconfirmation.email_address)
 
     def send_mail(self, template_prefix, email, context):
-        context = {**context, "verification_expiry_days": settings.ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS}
         try:
             return super().send_mail(template_prefix, email, context)
         except (SMTPException, OSError) as error:

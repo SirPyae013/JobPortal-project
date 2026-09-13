@@ -2,6 +2,10 @@ import type { Job, User } from "../types";
 
 const API_ROOT = "/api/v1";
 
+export function dashboardRequest<T>(path: string, options: RequestInit = {}) {
+  return request<T>(`/dashboard${path}`, options, false);
+}
+
 export interface Page<T> {
   count: number;
   next: string | null;
@@ -46,7 +50,7 @@ export async function ensureCsrf() {
   await fetch(`${API_ROOT}/auth/csrf/`, { credentials: "include" });
 }
 
-async function request<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}, retry = true, responseType: "json" | "blob" = "json"): Promise<T> {
   const method = (options.method || "GET").toUpperCase();
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData) && options.body && !headers.has("Content-Type")) {
@@ -63,10 +67,10 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
     });
     try {
       await refreshRequest;
-      return request<T>(path, options, false);
+      return request<T>(path, options, false, responseType);
     } catch {}
   }
-  const data = response.status === 204 ? null : await response.json().catch(() => null);
+  const data = response.status === 204 ? null : response.ok && responseType === "blob" ? await response.blob() : await response.json().catch(() => null);
   if (!response.ok) {
     const fields = data?.fields || {};
     throw new ApiError(
@@ -77,6 +81,19 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
     );
   }
   return data as T;
+}
+
+export async function downloadResume(resource: "applications" | "students", id: string, name: string) {
+  const file = await request<Blob>(`/${resource}/${encodeURIComponent(id)}/resume/`, { cache: "no-store" }, true, "blob");
+  if (!file.type.toLowerCase().startsWith("application/pdf")) throw new Error("The server did not return a PDF résumé. Please try again.");
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${name.replace(/[^\p{L}\p{N} _-]/gu, "").trim() || "candidate"}-${resource === "applications" ? "application" : "profile"}-${id.slice(0, 8)}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 function mapJob(dto: any): Job {
@@ -123,8 +140,8 @@ export async function fetchJobs(params?: { q?: string; job_type?: string; indust
   return (await pageResults<any>(`/jobs/${query.size ? `?${query}` : ""}`, allPages)).map(mapJob);
 }
 
-export async function fetchMyJobs(allPages = false) {
-  return (await pageResults<any>("/jobs/?mine=1", allPages)).map(mapJob);
+export async function fetchMyJobs(allPages = false, signal?: AbortSignal) {
+  return (await pageResults<any>("/jobs/?mine=1", allPages, signal)).map(mapJob);
 }
 
 export async function registerAccount(payload: {
@@ -156,17 +173,17 @@ export async function logout() {
   await request("/auth/logout/", { method: "POST" });
 }
 
-export async function fetchCurrentUser(): Promise<User> {
-  return request<User>("/auth/me/");
+export async function fetchCurrentUser(signal?: AbortSignal): Promise<User> {
+  return request<User>("/auth/me/", { signal });
 }
 
 export async function requestPasswordReset(email: string) {
   return request("/auth/password/reset/", { method: "POST", body: JSON.stringify({ email }) });
 }
 
-export async function verifyEmail(key: string) {
+export async function verifyEmail(email: string, code: string) {
   await ensureCsrf();
-  return request("/auth/registration/verify-email/", { method: "POST", body: JSON.stringify({ key }) });
+  return request("/auth/registration/verify-email/", { method: "POST", body: JSON.stringify({ email, code }) });
 }
 
 export async function resendVerificationEmail(email: string) {
@@ -259,36 +276,74 @@ export async function deleteJob(id: string) {
   return request<void>(`/jobs/${id}/`, { method: "DELETE" });
 }
 
-export async function fetchApplications(allPages = false): Promise<any[]> {
-  return pageResults<any>("/applications/", allPages);
+export async function fetchApplications(allPages = false, signal?: AbortSignal): Promise<any[]> {
+  return pageResults<any>("/applications/", allPages, signal);
 }
 
 export async function updateApplicationStatus(id: string, status: string) {
   return request(`/applications/${id}/status/`, { method: "PATCH", body: JSON.stringify({ status }) });
 }
 
-export async function fetchCompany() {
-  return request<any>("/company/me/");
+export type ApprovalStatus = "pending" | "approved" | "rejected";
+
+export interface RecruiterProfile {
+  id: string;
+  name: string;
+  email: string;
+  job_title: string;
+  phone: string;
+  bio: string;
+  photo_url: string | null;
+  approval_status: ApprovalStatus;
+  rejection_reason: string;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  website: string;
+  industry: string;
+  location: string;
+  contact_email: string;
+  description: string;
+  approval_status: ApprovalStatus;
+  rejection_reason: string;
+}
+
+export function fetchRecruiterProfile(signal?: AbortSignal) {
+  return request<RecruiterProfile>("/recruiter-profile/me/", { signal });
+}
+
+export function updateRecruiterProfile(payload: Pick<RecruiterProfile, "name" | "job_title" | "phone" | "bio">, photo?: File) {
+  const form = new FormData();
+  for (const [field, value] of Object.entries(payload)) form.set(field, value);
+  if (photo) form.set("photo", photo);
+  return request<RecruiterProfile>("/recruiter-profile/me/", { method: "PATCH", body: form });
+}
+
+export async function fetchCompany(signal?: AbortSignal) {
+  return request<Company>("/company/me/", { signal });
 }
 
 export async function updateCompany(form: FormData) {
-  return request<any>("/company/me/", { method: "PATCH", body: form });
+  return request<Company>("/company/me/", { method: "PATCH", body: form });
 }
 
 export async function resubmitCompany() {
   return request("/company/me/resubmit/", { method: "POST" });
 }
 
-export async function fetchStudents(search = "", allPages = false) {
-  return pageResults<any>(`/students/${search ? `?search=${encodeURIComponent(search)}` : ""}`, allPages);
+export async function fetchStudents(search = "", allPages = false, signal?: AbortSignal) {
+  return pageResults<StudentProfile>(`/students/${search ? `?search=${encodeURIComponent(search)}` : ""}`, allPages, signal);
 }
 
-export async function fetchNotifications() {
-  return (await request<Page<any>>("/notifications/")).results;
+export async function fetchNotifications(signal?: AbortSignal) {
+  return (await request<Page<any>>("/notifications/", { signal, cache: "no-store" })).results;
 }
 
-export async function fetchUnreadCount() {
-  return request<{ count: number }>("/notifications/unread-count/");
+export async function fetchUnreadCount(signal?: AbortSignal) {
+  return request<{ count: number }>("/notifications/unread-count/", { signal, cache: "no-store" });
 }
 
 export async function markAllNotificationsRead() {

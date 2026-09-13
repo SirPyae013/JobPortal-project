@@ -1,4 +1,4 @@
-from django.http import FileResponse
+from core.files import private_resume_response
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -63,4 +63,4 @@ class ApplicationViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.
         application = self.get_object()
         if not application.resume:
             return Response({"detail": "No resume was submitted."}, status=status.HTTP_404_NOT_FOUND)
-        return FileResponse(application.resume.open("rb"), as_attachment=True, filename=f"{application.student.student_profile.name}-resume.pdf")
+        return private_resume_response(application.resume, f"{application.applicant_name}-application-{application.pk}-resume.pdf")

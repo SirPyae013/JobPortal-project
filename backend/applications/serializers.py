@@ -24,13 +24,13 @@ class ApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "student_profile", "resume_download_url", "status", "submitted_at", "updated_at"]
 
     def get_student_profile(self, application) -> dict:
-        profile = application.student.student_profile
+        profile = getattr(application.student, "student_profile", None)
         return {
-            "id": str(profile.id),
-            "name": profile.name,
-            "university": profile.university,
-            "graduation_year": profile.graduation_year,
-            "skills": list(profile.skills.values_list("name", flat=True)),
+            "id": str(profile.id) if profile else None,
+            "name": application.applicant_name,
+            "university": profile.university if profile else "",
+            "graduation_year": profile.graduation_year if profile else None,
+            "skills": list(profile.skills.values_list("name", flat=True)) if profile else [],
         }
 
     def get_resume_download_url(self, application) -> str | None:
@@ -68,8 +68,13 @@ class ApplicationSerializer(serializers.ModelSerializer):
             profile_resume.close()
         elif source == Application.ResumeSource.UPLOAD:
             application.resume = upload
-        application.full_clean()
-        application.save()
+        try:
+            application.full_clean()
+            application.save()
+        finally:
+            # PDF validation opens saved snapshots; release the handle on Windows too.
+            if application.resume:
+                application.resume.close()
         notify(
             application.job.recruiter.user,
             "new_application",

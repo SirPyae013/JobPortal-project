@@ -38,3 +38,8 @@ class Application(models.Model):
 
     def __str__(self):
         return f"{self.student.email} - {self.job.title}"
+
+    @property
+    def applicant_name(self):
+        profile = getattr(self.student, "student_profile", None)
+        return (profile.name if profile else "") or self.student.get_full_name() or "Applicant"

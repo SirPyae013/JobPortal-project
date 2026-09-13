@@ -382,7 +382,7 @@ Check these in order:
 1. Open `https://YOUR_SERVICE.onrender.com/api/v1/health/`. Expect a successful response with `status: ok`.
 2. Open the homepage and refresh a nested page. Styles, JavaScript and navigation should load.
 3. Register using an email address you control. Confirm delivery in both your inbox and Brevo's logs.
-4. Open the verification link. It must point to your live HTTPS site, then confirm and sign in.
+4. Enter the six-digit verification code from the email in the app, then sign in. The code expires after 10 minutes.
 5. Use Forgot Password, follow its email and confirm that the old password stops working.
 6. Upload a profile photo and a small test PDF resume. Confirm they appear in the private storage bucket.
 7. Try opening the resume's Django download URL while signed out: access should be denied. Do not make the bucket public to fix an authorization problem.
@@ -423,4 +423,4 @@ The previous code version can be redeployed if a code change fails. Reverting co
 
 Both frontend and backend are deployed by the guide above. A separate Vercel/Netlify frontend is possible, but the current app would also need production API proxy rules, frontend build-base changes and SPA fallback rules. Directly pointing the browser at another domain is insufficient because login relies on same-origin cookies and CSRF handling. Resume downloads and upload-size limits must be checked too.
 
-For the first free deployment, keep the single public origin described here. It supports the existing frontend, backend, verification links, admin and file downloads with fewer configuration changes.
+For the first free deployment, keep the single public origin described here. It supports the existing frontend, backend, email verification, admin and file downloads with fewer configuration changes.

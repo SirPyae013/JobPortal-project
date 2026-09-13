@@ -21,6 +21,7 @@ interface EditProfileModalProps {
     profilePhoto?: File;
     experience: string;
     bio: string;
+    graduationYear: string;
   }) => Promise<void>;
 }
 
@@ -38,6 +39,7 @@ export default function EditProfileModal({
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState("");
   const [experience, setExperience] = useState("");
   const [bio, setBio] = useState("");
+  const [graduationYear, setGraduationYear] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -58,6 +60,7 @@ export default function EditProfileModal({
         setPhotoPreviewUrl(profile.photo_url || "");
         setExperience(profile.experience || "");
         setBio(profile.bio || "");
+        setGraduationYear(profile.graduation_year ? String(profile.graduation_year) : "");
       })
       .catch((loadError: Error) => {
         if (loadError.message === "AUTH_REQUIRED") {
@@ -72,7 +75,7 @@ export default function EditProfileModal({
 
   const handleResumeFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type !== "application/pdf") {
+    if (file && !file.name.toLowerCase().endsWith(".pdf")) {
       setError("Please attach a PDF resume.");
       setResumeFile(undefined);
       return;
@@ -109,6 +112,7 @@ export default function EditProfileModal({
         profilePhoto,
         experience: experience.trim(),
         bio: bio.trim(),
+        graduationYear,
       });
       onClose();
     } catch (saveError) {
@@ -213,6 +217,11 @@ export default function EditProfileModal({
                     </div>
 
                     <div>
+                      <label htmlFor="profile-graduation-year" className="block text-xs font-semibold text-[#001142] uppercase tracking-wider mb-2">Graduation year</label>
+                      <input id="profile-graduation-year" type="number" min="1900" max="2200" step="1" required value={graduationYear} onChange={event => setGraduationYear(event.target.value)} placeholder="2027" className="w-full text-sm px-4 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-[#001142] bg-slate-50/50" />
+                      <p className="mt-1 text-xs text-slate-500">Add your graduation year, bio, skills, and résumé to help recruiters understand your profile.</p>
+                    </div>
+                    <div>
                       <label
                         htmlFor="profile-skills"
                         className="block text-xs font-semibold text-[#001142] uppercase tracking-wider mb-2"
@@ -236,7 +245,7 @@ export default function EditProfileModal({
                         htmlFor="profile-resume-url"
                         className="block text-xs font-semibold text-[#001142] uppercase tracking-wider mb-2"
                       >
-                        Resume Link
+                        Saved résumé
                       </label>
                       <div className="relative">
                         <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

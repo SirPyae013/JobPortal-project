@@ -2,12 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (() => {
+        const media = window.matchMedia('(prefers-color-scheme: dark)');
+        const stored = () => { try { return localStorage.getItem('jobportal-theme'); } catch { return null; } };
+        const apply = () => {
+          const preference = stored();
+          const theme = preference === 'dark' || preference === 'light' ? preference : media.matches ? 'dark' : 'light';
+          document.documentElement.dataset.theme = theme;
+          window.dispatchEvent(new Event('themechange'));
+        };
+        apply();
+        media.addEventListener('change', apply);
+        window.addEventListener('storage', event => { if (event.key === 'jobportal-theme' || event.key === null) apply(); });
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Job Portal</title>
+    <link rel="icon" type="image/svg+xml" href="/src/assets/logo-mark.svg" />
+    <meta name="theme-color" content="#016a61" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

@@ -95,6 +95,20 @@ class StudentProfileSerializer(serializers.ModelSerializer):
         return instance
 
 
+class RecruiterProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email", read_only=True)
+    photo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RecruiterProfile
+        fields = ["id", "name", "email", "job_title", "phone", "bio", "photo", "photo_url", "approval_status", "rejection_reason"]
+        read_only_fields = ["id", "email", "approval_status", "rejection_reason"]
+        extra_kwargs = {"photo": {"write_only": True}}
+
+    def get_photo_url(self, instance) -> str | None:
+        return self.context["request"].build_absolute_uri(instance.photo.url) if instance.photo else None
+
+
 class CurrentUserSerializer(serializers.ModelSerializer):
     email_verified = serializers.BooleanField(read_only=True)
     capabilities = serializers.SerializerMethodField()
@@ -122,6 +136,7 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             company = getattr(recruiter, "company", None)
             return {
                 "name": recruiter.name,
+                "photo_url": self.context["request"].build_absolute_uri(recruiter.photo.url) if recruiter.photo else None,
                 "approval_status": recruiter.approval_status,
                 "rejection_reason": recruiter.rejection_reason,
                 "company_approval_status": company.approval_status if company else None,

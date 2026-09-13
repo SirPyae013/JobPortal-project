@@ -8,7 +8,7 @@
 .cm-header { position: sticky; top: 0; z-index: 40; background: #fffffffa; border-bottom: 1px solid var(--cm-line); backdrop-filter: blur(12px); }
 .cm-nav { min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 26px; }
 .cm-brand { display: inline-flex; align-items: center; gap: 10px; font-size: 1.4rem; font-weight: 750; letter-spacing: -.045em; line-height: 1.2; flex-shrink: 0; }
-.cm-brand-mark { width: 43px; height: 43px; background: var(--cm-navy); color: #fff; display: grid; place-items: center; border-radius: 12px 12px 12px 3px; }
+.cm-brand-mark { width: 43px; height: 43px; display: grid; place-items: center; }
 .cm-brand-accent { color: var(--cm-teal); }
 .cm-brand small { display: block; margin-top: 5px; font-size: .6875rem; color: #637083; font-weight: 500; letter-spacing: .06em; }
 .cm-desktop-links { align-self: stretch; display: flex; align-items: stretch; gap: 24px; margin-inline: auto; }
@@ -148,6 +148,19 @@
 .cm-workspace-stats span { color: #647289; font-size: .8125rem; }
 .cm-workspace-nav { display: flex; gap: 25px; padding: 0 3px 15px; border-bottom: 1px solid var(--cm-line); font-size: .875rem; color: #566780; }
 .cm-workspace-nav a:hover { color: var(--cm-teal); }
+.cm-workspace-nav button:hover { color: var(--cm-teal); }
+.cm-profile-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 26px; align-items: start; }
+.cm-profile-summary { position: sticky; top: 110px; }
+.cm-profile-logo { display: grid; place-items: center; flex-shrink: 0; width: 72px; height: 72px; overflow: hidden; border: 1px solid var(--cm-line); border-radius: 14px; color: var(--cm-teal); }
+.cm-profile-logo img { width: 100%; height: 100%; object-fit: contain; }
+.cm-profile-photo { display: grid; place-items: center; flex-shrink: 0; width: 80px; height: 80px; overflow: hidden; border: 1px solid var(--cm-line); border-radius: 50%; color: var(--cm-teal); }
+.cm-profile-photo img { width: 100%; height: 100%; object-fit: cover; }
+.cm-profile-page button:disabled { cursor: not-allowed; opacity: .6; }
+.cm-profile-page fieldset:disabled .cm-button { cursor: wait; opacity: .6; }
+@media (max-width: 900px) {
+  .cm-profile-layout { grid-template-columns: minmax(0, 1fr); }
+  .cm-profile-summary { position: static; }
+}
 .cm-recruiter > section[id] { scroll-margin-top: 110px; }
 .cm-recruiter table th { font-size: .75rem; font-weight: 600; color: #64758c; background: #f6f8fb; padding: 13px 16px; }
 .cm-recruiter table td { padding: 16px; }

@@ -1,13 +1,15 @@
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from core.views import public_image
 
 
 urlpatterns = [
+    path("api/v1/dashboard/", include("core.dashboard_urls")),
     path("admin/", admin.site.urls),
+    re_path(r"^accounts/confirm-email(?:/.*)?$", RedirectView.as_view(url="/verify-email", permanent=False)),
     path("accounts/", include("allauth.urls")),
     path("api/v1/auth/", include("accounts.urls")),
     path("api/v1/", include("accounts.api_urls")),

@@ -21,6 +21,11 @@ export default defineConfig(({ command }) => {
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
       proxy: {
+        '/admin': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+          secure: false,
+        },
         '/api': {
           target: 'http://localhost:8000',
           changeOrigin: true,

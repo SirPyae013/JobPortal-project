@@ -19,6 +19,7 @@ import NotificationsModal from "./components/NotificationsModal";
 import AuthActionPage from "./components/AuthActionPage";
 import StudentView from "./designs/modern/StudentView";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
+import RecruiterProfilePage from "./pages/RecruiterProfilePage";
 import { ensureCsrf, fetchCurrentUser, fetchStudentProfile, fetchUnreadCount, logout, registerAccount, updateStudentProfile } from "./services/api";
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
     null,
   );
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [postJobRequested, setPostJobRequested] = useState(false);
   const [isProfilePreviewOpen, setIsProfilePreviewOpen] = useState(false);
   const [profilePreview, setProfilePreview] = useState<ProfilePreview>({
     photoUrl: "",
@@ -82,7 +84,6 @@ export default function App() {
         if (user.role === "student") {
           fetchStudentProfile().then((profile) => setProfilePhotoUrl(profile.photo_url || "")).catch(() => undefined);
         }
-        fetchUnreadCount().then((result) => setUnreadCount(result.count)).catch(() => undefined);
       })
       .catch(() => setCurrentUser(null));
   }, []);
@@ -108,6 +109,17 @@ export default function App() {
     }
   }, [currentPath]);
 
+  useEffect(() => {
+    setUnreadCount(0);
+    setIsNotificationsOpen(false);
+    if (!currentUser) return;
+    const controller = new AbortController();
+    fetchUnreadCount(controller.signal).then(result => {
+      if (!controller.signal.aborted) setUnreadCount(result.count);
+    }).catch(() => undefined);
+    return () => controller.abort();
+  }, [currentUser?.id]);
+
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
     if (user.role === "student" || user.role === "recruiter") setUserRole(user.role);
@@ -116,7 +128,6 @@ export default function App() {
     } else {
       setProfilePhotoUrl("");
     }
-    fetchUnreadCount().then((result) => setUnreadCount(result.count)).catch(() => undefined);
   };
 
   const handleOpenLogin = (mode: "login" | "register" = "register") => {
@@ -134,6 +145,11 @@ export default function App() {
   };
 
   const handleOpenProfile = async () => {
+    if (currentUser?.role === "recruiter") {
+      navigate("/recruiter/profile");
+      window.scrollTo({ top: 0 });
+      return;
+    }
     setIsProfilePreviewOpen(true);
     setIsApplicationsModalOpen(false);
     setIsInfoModalOpen(false);
@@ -178,6 +194,7 @@ export default function App() {
     setUnreadCount(0);
     setUserRole("student");
     setIsProfilePreviewOpen(false);
+    setPostJobRequested(false);
   };
 
   return (
@@ -185,7 +202,7 @@ export default function App() {
       <Navbar
         isLoggedIn={isLoggedIn}
         currentUserName={currentUserName}
-        profilePhotoUrl={profilePhotoUrl}
+        profilePhotoUrl={currentUser?.role === "recruiter" ? currentUser.profile?.photo_url || "" : profilePhotoUrl}
         userRole={userRole}
         canManageJobs={Boolean(currentUser?.capabilities.manage_jobs)}
         onLoginClick={() => handleOpenLogin("login")}
@@ -199,8 +216,8 @@ export default function App() {
           }
         }}
         onPostJob={() => {
+          setPostJobRequested(true);
           navigate("/jobs");
-          window.dispatchEvent(new Event("jobportal:post-job"));
         }}
         onMyProfile={handleOpenProfile}
         onMyApplications={handleOpenApplications}
@@ -210,10 +227,21 @@ export default function App() {
         unreadCount={unreadCount}
       />
 
-      {currentPath.startsWith("/verify-email/") || currentPath.startsWith("/password/reset/confirm/") ? (
+      {currentPath === "/verify-email" || currentPath.startsWith("/verify-email/") || currentPath.startsWith("/password/reset/confirm/") ? (
         <AuthActionPage key={currentPath} path={currentPath} onDone={() => navigate("/login")} />
       ) : isLoggedIn && userRole === "recruiter" ? (
-        <RecruiterDashboard />
+        currentPath.replace(/\/$/, "") === "/recruiter/profile" ? (
+          <RecruiterProfilePage
+            key={currentUser.id}
+            onBack={() => navigate("/jobs")}
+            onProfileSaved={profile => setCurrentUser(user => user ? { ...user, profile: { ...user.profile, name: profile.name, photo_url: profile.photo_url, approval_status: profile.approval_status, rejection_reason: profile.rejection_reason } } : user)}
+            onCompanySaved={company => setCurrentUser(user => {
+              if (!user) return user;
+              const approved = user.email_verified && user.profile?.approval_status === "approved" && company.approval_status === "approved";
+              return { ...user, profile: { ...user.profile, name: user.profile?.name || "", company_approval_status: company.approval_status, company_rejection_reason: company.rejection_reason }, capabilities: { ...user.capabilities, manage_jobs: approved, browse_students: approved } };
+            })}
+          />
+        ) : <RecruiterDashboard key={currentUser.id} onEditProfile={handleOpenProfile} onUserChange={setCurrentUser} postJobRequested={postJobRequested} onPostJobHandled={() => setPostJobRequested(false)} />
       ) : (
         <StudentView
           isLoggedIn={isLoggedIn}
@@ -282,7 +310,7 @@ export default function App() {
         type={infoModalType}
         onClose={() => navigate("/jobs")}
       />
-      <NotificationsModal isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} onRead={() => setUnreadCount(0)} />
+      <NotificationsModal key={currentUser?.id || "signed-out"} isOpen={Boolean(currentUser) && isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} onRead={() => setUnreadCount(0)} />
     </div>
   );
 }

@@ -8,6 +8,11 @@ class IsStudent(BasePermission):
         return bool(request.user.is_authenticated and request.user.role == User.Role.STUDENT)
 
 
+class IsRecruiter(BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user.is_authenticated and request.user.role == User.Role.RECRUITER)
+
+
 class IsApprovedRecruiter(BasePermission):
     message = "Your recruiter account and company must both be approved."
 

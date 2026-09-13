@@ -12,3 +12,18 @@ backend/staticfiles/
 *.log
 .env*
 !.env.example
+
+# Local report deliverables and their working files
+/reports/
+
+# Tool caches and temporary editor files
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.tsbuildinfo
+*.tmp
+*.swp
+*.swo
+~$*
+Thumbs.db
+Desktop.ini

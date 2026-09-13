@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Bell, BriefcaseBusiness, GraduationCap, LogOut, Menu, X } from "lucide-react";
+import { ArrowUpRight, Bell, BriefcaseBusiness, LogOut, Menu, X } from "lucide-react";
+import LogoMark from "../../components/LogoMark";
+import ThemeToggle from "../../components/ThemeToggle";
 
 export interface NavbarProps {
   isLoggedIn: boolean;
@@ -46,6 +48,7 @@ export default function Navbar(props: NavbarProps) {
   const act = (callback: () => void) => () => { setMenuOpen(false); callback(); };
   const links = [
     { label: recruiter ? "Workspace" : "Find a job", callback: props.onBrowseJobs, active: !props.currentPath || props.currentPath === "/" || props.currentPath === "/jobs" },
+    ...(recruiter ? [{ label: "Recruiter profile", callback: props.onMyProfile, active: props.currentPath?.replace(/\/$/, "") === "/recruiter/profile" }] : []),
     ...(props.isLoggedIn && !recruiter ? [
       { label: "My applications", callback: props.onMyApplications, active: false },
       { label: "My profile", callback: props.onMyProfile, active: false },
@@ -59,13 +62,14 @@ export default function Navbar(props: NavbarProps) {
       <a className="cm-skip-link" href="#main-content">Skip to content</a>
       <div className="cm-nav cm-container">
         <a href="/jobs" className="cm-brand" onClick={(event) => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); act(props.onBrowseJobs)(); } }}>
-          <span className="cm-brand-mark"><GraduationCap size={25} strokeWidth={1.8} aria-hidden="true" /></span>
+          <span className="cm-brand-mark"><LogoMark /></span>
           <span>Job<span className="cm-brand-accent">Portal</span><small>Campus to career</small></span>
         </a>
         <nav className="cm-desktop-links" aria-label="Main navigation">
           {links.map((link) => <button key={link.label} type="button" aria-current={link.active ? "page" : undefined} onClick={act(link.callback)}>{link.label}</button>)}
         </nav>
         <div className="cm-account-actions">
+          <ThemeToggle />
           {props.isLoggedIn ? <>
             {recruiter && props.canManageJobs && <button type="button" className="cm-button cm-primary cm-post-job" onClick={act(props.onPostJob)}><BriefcaseBusiness size={16} aria-hidden="true" />Post a job</button>}
             <button type="button" className="cm-icon-button cm-notifications" onClick={act(props.onNotifications)} aria-label={`Notifications${props.unreadCount ? `, ${props.unreadCount} unread` : ""}`}>

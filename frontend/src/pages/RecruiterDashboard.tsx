@@ -4,14 +4,13 @@ import type { Job, User } from "../types";
 import {
   createJob,
   deleteJob,
+  downloadResume,
   fetchApplications,
   fetchCompany,
   fetchCurrentUser,
   fetchMyJobs,
   fetchStudents,
-  resubmitCompany,
   updateApplicationStatus,
-  updateCompany,
 } from "../services/api";
 
 export interface CandidateApplication {
@@ -22,84 +21,101 @@ export interface CandidateApplication {
   status: "Reviewing" | "Shortlisted" | "Interviewed" | "Hired";
 }
 
-export default function RecruiterDashboard() {
+interface RecruiterDashboardProps {
+  onEditProfile: () => void;
+  onUserChange: (user: User) => void;
+  postJobRequested: boolean;
+  onPostJobHandled: () => void;
+}
+
+export default function RecruiterDashboard({ onEditProfile, onUserChange, postJobRequested, onPostJobHandled }: RecruiterDashboardProps) {
   const [user, setUser] = useState<User | null>(null);
   const [company, setCompany] = useState<any>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [studentSearch, setStudentSearch] = useState("");
+  const [directoryQuery, setDirectoryQuery] = useState("");
+  const [directoryRevision, setDirectoryRevision] = useState(0);
+  const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [directoryError, setDirectoryError] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [isSavingCompany, setIsSavingCompany] = useState(false);
   const [showJobForm, setShowJobForm] = useState(false);
+  const [downloadingResume, setDownloadingResume] = useState<string | null>(null);
   const approved = Boolean(user?.capabilities.manage_jobs);
 
-  const load = async () => {
+  const handleDownloadResume = async (resource: "applications" | "students", id: string, name: string) => {
+    if (downloadingResume) return;
+    setError("");
+    setDownloadingResume(id);
+    try { await downloadResume(resource, id, name); }
+    catch (downloadError) { setError(downloadError instanceof Error ? downloadError.message : "Unable to download this résumé."); }
+    finally { setDownloadingResume(null); }
+  };
+
+  const load = async (signal?: AbortSignal) => {
     try {
       const [nextUser, nextCompany] = await Promise.all([
-        fetchCurrentUser(),
-        fetchCompany(),
+        fetchCurrentUser(signal),
+        fetchCompany(signal),
       ]);
+      if (signal?.aborted) return;
       setUser(nextUser);
+      onUserChange(nextUser);
       setCompany(nextCompany);
-      if (nextUser.capabilities.manage_jobs) {
-        const [nextJobs, nextApplications, nextStudents] = await Promise.all([
-          fetchMyJobs(true),
-          fetchApplications(true),
-          fetchStudents("", true),
-        ]);
-        setJobs(nextJobs);
-        setApplications(nextApplications);
-        setStudents(nextStudents);
-      }
     } catch (loadError: any) {
-      setError(loadError.message);
+      if (!signal?.aborted) setError(loadError.message);
     }
   };
 
   useEffect(() => {
-    load();
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
+  }, []);
+  useEffect(() => {
+    if (!approved) { setJobs([]); setApplications([]); return; }
+    const controller = new AbortController();
+    Promise.all([fetchMyJobs(true, controller.signal), fetchApplications(true, controller.signal)])
+      .then(([nextJobs, nextApplications]) => {
+        if (controller.signal.aborted) return;
+        setJobs(nextJobs);
+        setApplications(nextApplications);
+      })
+      .catch(error => { if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "Unable to load your hiring activity."); });
+    return () => controller.abort();
+  }, [approved]);
+  useEffect(() => {
+    if (!approved) { setStudents([]); return; }
+    const controller = new AbortController();
+    setDirectoryLoading(true);
+    setDirectoryError("");
+    setStudents([]);
+    fetchStudents(directoryQuery, true, controller.signal)
+      .then(students => { if (!controller.signal.aborted) setStudents(students); })
+      .catch(error => { if (!controller.signal.aborted) setDirectoryError(error instanceof Error ? error.message : "Unable to load students."); })
+      .finally(() => { if (!controller.signal.aborted) setDirectoryLoading(false); });
+    return () => controller.abort();
+  }, [approved, directoryQuery, directoryRevision]);
+  useEffect(() => {
+    const refresh = () => setDirectoryRevision(value => value + 1);
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
   }, []);
   useEffect(() => {
     if (approved) return;
-    const approvalPoll = window.setInterval(() => void load(), 5000);
-    return () => window.clearInterval(approvalPoll);
+    const controller = new AbortController();
+    const approvalPoll = window.setInterval(() => void load(controller.signal), 5000);
+    return () => { controller.abort(); window.clearInterval(approvalPoll); };
   }, [approved]);
   useEffect(() => {
-    const openJobForm = () => {
-      setShowJobForm(true);
-      window.setTimeout(
-        () =>
-          document
-            .getElementById("new-job-form")
-            ?.scrollIntoView({ behavior: "smooth" }),
-        0,
-      );
-    };
-    window.addEventListener("jobportal:post-job", openJobForm);
-    return () => window.removeEventListener("jobportal:post-job", openJobForm);
-  }, []);
-
-  const saveCompany = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const website = String(data.get("website") || "").trim();
-    if (website && !/^https?:\/\//i.test(website))
-      data.set("website", `https://${website}`);
-    setError("");
-    setSuccess("");
-    setIsSavingCompany(true);
-    try {
-      setCompany(await updateCompany(data));
-      await load();
-      setSuccess("Company profile saved successfully.");
-    } catch (saveError: any) {
-      setError(saveError.message);
-    } finally {
-      setIsSavingCompany(false);
-    }
-  };
+    if (!postJobRequested || !approved) return;
+    setShowJobForm(true);
+    onPostJobHandled();
+  }, [postJobRequested, approved, onPostJobHandled]);
+  useEffect(() => {
+    if (showJobForm) document.getElementById("new-job-form")?.scrollIntoView({ behavior: "smooth" });
+  }, [showJobForm]);
 
   const postJob = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -143,22 +159,13 @@ export default function RecruiterDashboard() {
           {error}
         </div>
       )}
-      {success && (
-        <div
-          role="status"
-          className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700"
-        >
-          {success}
-        </div>
-      )}
-
       {!approved && (
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">
-            Approval pending
+            Account review
           </p>
           <h2 className="mt-2 text-2xl font-bold text-[#001142]">
-            Complete your company profile
+            Build your recruiter profile
           </h2>
           <p className="mt-2 text-sm text-slate-600">
             Recruiter: {user.profile?.approval_status}. Company:{" "}
@@ -181,75 +188,18 @@ export default function RecruiterDashboard() {
           <a href="#candidate-applications"><FileText aria-hidden="true" /><div><strong>{applications.length}</strong><span>Applications</span></div></a>
           <a href="#candidate-applications"><Users aria-hidden="true" /><div><strong>{applications.filter((application) => application.status === "submitted").length}</strong><span>Awaiting review</span></div></a>
         </div>
-        <nav className="cm-workspace-nav" aria-label="Recruiter sections"><a href="#posted-jobs">Job listings</a><a href="#candidate-applications">Applications</a><a href="#student-talent">Talent directory</a></nav>
+        <nav className="cm-workspace-nav" aria-label="Recruiter sections"><a href="#posted-jobs">Job listings</a><a href="#candidate-applications">Applications</a><a href="#student-talent">Talent directory</a><button type="button" onClick={onEditProfile}>Recruiter profile</button></nav>
       </div>}
 
-      {!approved && (
-        <section className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-          <h2 className="text-2xl font-bold text-[#001142]">Company Profile</h2>
-          <form
-            onSubmit={saveCompany}
-            className="mt-5 grid gap-4 md:grid-cols-2"
-          >
-            {[
-              ["name", "Company name"],
-              ["website", "Website"],
-              ["industry", "Industry"],
-              ["location", "Location"],
-              ["contact_email", "Contact email"],
-            ].map(([name, label]) => (
-              <label
-                key={name}
-                className="text-xs font-bold uppercase tracking-wider text-slate-500"
-              >
-                {label}
-                <input
-                  name={name}
-                  type={name === "contact_email" ? "email" : "text"}
-                  defaultValue={company[name] || ""}
-                  required={name === "name" || name === "contact_email"}
-                  placeholder={
-                    name === "website"
-                      ? "example.com or https://example.com"
-                      : undefined
-                  }
-                  className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm font-normal normal-case text-[#001142]"
-                />
-              </label>
-            ))}
-            <label className="md:col-span-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-              Description
-              <textarea
-                name="description"
-                defaultValue={company.description || ""}
-                rows={4}
-                className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm font-normal normal-case text-[#001142]"
-              />
-            </label>
-            <div className="md:col-span-2 flex gap-3">
-              <button
-                type="submit"
-                disabled={isSavingCompany}
-                className="rounded-lg bg-[#016a61] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSavingCompany ? "Saving…" : "Save company"}
-              </button>
-              {!approved && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await resubmitCompany();
-                    await load();
-                  }}
-                  className="rounded-lg border border-[#016a61] px-5 py-3 text-sm font-bold text-[#016a61]"
-                >
-                  Resubmit approval
-                </button>
-              )}
-            </div>
-          </form>
-        </section>
-      )}
+      <section className="bg-white rounded-2xl border border-slate-100 p-6">
+        <div className="cm-listings-heading flex items-center justify-between gap-5">
+          <div>
+            <h2 className="text-xl font-bold text-[#001142]">Your recruiter profile</h2>
+            <p className="mt-2 text-sm text-slate-500">Add your recruiter details, company story and logo. You can update them at any time.</p>
+          </div>
+          <button type="button" className="cm-button cm-primary shrink-0" onClick={onEditProfile}>Edit recruiter profile</button>
+        </div>
+      </section>
 
       {approved && (
         <>
@@ -303,7 +253,8 @@ export default function RecruiterDashboard() {
                   name="compensation_min"
                   aria-label="Minimum compensation in MMK per month"
                   type="number"
-                  min="1"
+                  min="5000"
+                  step="5000"
                   required
                   placeholder="Minimum MMK/month"
                   className="rounded-lg border p-3"
@@ -312,7 +263,8 @@ export default function RecruiterDashboard() {
                   name="compensation_max"
                   aria-label="Maximum compensation in MMK per month"
                   type="number"
-                  min="1"
+                  min="5000"
+                  step="5000"
                   placeholder="Maximum MMK/month"
                   className="rounded-lg border p-3"
                 />
@@ -383,12 +335,14 @@ export default function RecruiterDashboard() {
             <h2 className="text-2xl font-bold text-[#001142]">
               Candidate Applications
             </h2>
+            <p className="mt-2 text-sm text-slate-500">Download the résumé submitted with each application. It may differ from the student's current profile résumé.</p>
             <table className="mt-5 min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b">
                   <th className="py-3">Candidate</th>
                   <th>University</th>
                   <th>Job</th>
+                  <th>Submitted résumé</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -400,6 +354,11 @@ export default function RecruiterDashboard() {
                     </td>
                     <td>{application.student_profile?.university}</td>
                     <td>{application.job_details?.title}</td>
+                    <td className="py-3 pr-4">
+                      {application.resume_download_url ? <button type="button" disabled={downloadingResume !== null} onClick={() => handleDownloadResume("applications", application.id, application.student_profile?.name || "candidate")} className="text-sm font-bold text-[#016a61] disabled:opacity-50" aria-label={`Download submitted résumé for ${application.student_profile?.name || "candidate"}, ${application.job_details?.title || "application"}`}>
+                        {downloadingResume === application.id ? "Downloading…" : "Download résumé"}
+                      </button> : <span className="text-slate-400">No résumé submitted</span>}
+                    </td>
                     <td>
                       <select
                         aria-label={`Application status for ${application.student_profile?.name || "candidate"}`}
@@ -440,10 +399,12 @@ export default function RecruiterDashboard() {
             <h2 className="text-2xl font-bold text-[#001142]">
               Student Talent Directory
             </h2>
+            <p className="mt-2 text-sm text-slate-500">Active, email-verified students and their current profile details. Résumés submitted to your jobs are available in Candidate Applications above.</p>
             <form
-              onSubmit={async (event) => {
+              onSubmit={(event) => {
                 event.preventDefault();
-                setStudents(await fetchStudents(studentSearch, true));
+                setDirectoryQuery(studentSearch.trim());
+                setDirectoryRevision(value => value + 1);
               }}
               className="cm-talent-search mt-4 flex gap-2"
             >
@@ -457,27 +418,33 @@ export default function RecruiterDashboard() {
               <button className="rounded-lg bg-[#001142] px-5 text-white">
                 Search
               </button>
+              <button type="button" disabled={directoryLoading} onClick={() => setDirectoryRevision(value => value + 1)} className="rounded-lg border border-slate-200 px-4 text-[#016a61] disabled:opacity-50">Refresh</button>
             </form>
+            {directoryError && <p role="alert" className="mt-4 text-sm text-red-600">{directoryError}</p>}
+            {directoryLoading && <p role="status" className="mt-4 text-sm text-slate-500">Loading student profiles…</p>}
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               {students.map((student) => (
                 <article key={student.id} className="rounded-xl border p-4">
-                  <h3 className="font-bold text-[#001142]">{student.name}</h3>
+                  <h3 className="font-bold text-[#001142]">{student.name || "Student"}</h3>
                   <p className="text-sm text-slate-500">
-                    {student.university} · {student.graduation_year}
+                    {student.university || "University not provided"} · {student.graduation_year || "Graduation year not provided"}
                   </p>
                   <p className="mt-2 text-xs text-[#425aa6]">
-                    {student.skills.join(", ")}
+                    {student.skills.join(", ") || "Skills not provided yet"}
                   </p>
-                  <a
-                    href={`/api/v1/students/${student.id}/resume/`}
-                    className="mt-3 inline-block text-sm font-bold text-[#016a61]"
+                  {!student.is_complete && <p className="mt-2 text-xs text-amber-700">Profile in progress</p>}
+                  {student.has_resume ? <button
+                    type="button"
+                    disabled={downloadingResume !== null}
+                    onClick={() => handleDownloadResume("students", student.id, student.name)}
+                    className="mt-3 inline-block text-sm font-bold text-[#016a61] disabled:opacity-50"
                   >
-                    Download résumé
-                  </a>
+                    {downloadingResume === student.id ? "Downloading…" : "Download profile résumé"}
+                  </button> : <p className="mt-3 text-sm text-slate-500">No résumé uploaded yet</p>}
                 </article>
               ))}
             </div>
-            {!students.length && <p className="mt-5 rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">{studentSearch ? "No students match your search. Try a different name, university or skill." : "Student profiles will appear here when they are available."}</p>}
+            {!directoryLoading && !directoryError && !students.length && <p className="mt-5 rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">{directoryQuery ? "No students match your search. Try a different name, university or skill." : "No active, email-verified student profiles are available yet."}</p>}
           </section>
         </>
       )}

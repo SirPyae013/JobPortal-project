@@ -7,7 +7,9 @@ import { useState, FormEvent, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Mail, Lock, User, GraduationCap } from "lucide-react";
 import type { User as AuthUser } from "../types";
-import { ApiError, googleLogin, login as loginAccount, requestPasswordReset, resendVerificationEmail } from "../services/api";
+import { ApiError, googleLogin, login as loginAccount, requestPasswordReset } from "../services/api";
+
+import EmailVerificationForm from "./EmailVerificationForm";
 
 declare global {
   interface Window { google?: any; }
@@ -49,9 +51,9 @@ export default function LoginModal({
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
-  const [resendLoading, setResendLoading] = useState(false);
+  const [loginNeedsVerification, setLoginNeedsVerification] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const busy = loading || resetLoading || resendLoading;
+  const busy = loading || resetLoading;
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -61,15 +63,10 @@ export default function LoginModal({
       setError("");
       setSuccessMessage("");
       setVerificationEmail("");
+      setLoginNeedsVerification(false);
       setLoading(false);
     }
   }, [initialMode, isOpen]);
-
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const timer = window.setTimeout(() => setResendCooldown((seconds) => Math.max(0, seconds - 1)), 1000);
-    return () => window.clearTimeout(timer);
-  }, [resendCooldown]);
 
   useEffect(() => {
     if (!isOpen || !googleClientId || !googleButtonRef.current) return;
@@ -118,35 +115,12 @@ export default function LoginModal({
     setUserRole("student");
   };
 
-  const handleResendVerification = async () => {
-    if (busy || resendCooldown > 0) return;
-    const address = (verificationEmail || email).trim();
-    setError("");
-    setSuccessMessage("");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
-      setError("Enter a valid email address first, then request a verification email.");
-      return;
-    }
-    setResendLoading(true);
-    try {
-      const result = await resendVerificationEmail(address);
-      setSuccessMessage(result.detail);
-      setResendCooldown(60);
-    } catch (resendError: unknown) {
-      if (resendError instanceof ApiError && resendError.status === 429) {
-        setResendCooldown(Math.max(60, resendError.retryAfter));
-      }
-      setError(resendError instanceof Error ? resendError.message : "Unable to send a verification email. Please try again.");
-    } finally {
-      setResendLoading(false);
-    }
-  };
-
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
     setError("");
     setSuccessMessage("");
+    setLoginNeedsVerification(false);
 
     if (!email || !password) {
       setError("Please fill in all standard credentials.");
@@ -209,6 +183,10 @@ export default function LoginModal({
       } catch (err: any) {
         setSuccessMessage("");
         setError(err?.message || "An error occurred");
+        setLoginNeedsVerification(
+          mode === "login" && err instanceof ApiError && err.status === 400 &&
+          Boolean(err.fields.non_field_errors?.includes("E-mail is not verified."))
+        );
       } finally {
         setLoading(false);
       }
@@ -285,14 +263,10 @@ export default function LoginModal({
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-[#016a61]">
                     <Mail aria-hidden="true" className="h-7 w-7" />
                   </div>
-                  <p className="text-sm leading-6 text-slate-600">
-                    We sent a verification link to <strong className="break-all text-[#001142]">{verificationEmail}</strong>.
-                    Open the email and confirm your address before signing in.
-                  </p>
-                  <p className="text-xs leading-5 text-slate-500">If it hasn't arrived, check your spam or junk folder. You can request another email below.</p>
-                  <button type="button" onClick={handleResendVerification} disabled={busy || resendCooldown > 0} className="w-full rounded-lg border border-teal-200 py-3 text-sm font-semibold text-[#016a61] hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60">
-                    {resendLoading ? "Sending verification email..." : resendCooldown > 0 ? `Resend email in ${resendCooldown}s` : "Resend verification email"}
-                  </button>
+                  <EmailVerificationForm initialEmail={verificationEmail} initialCooldown={resendCooldown} onVerified={() => {
+                    setVerificationEmail(""); setLoginNeedsVerification(false); setError(""); setMode("login"); setPassword("");
+                    setSuccessMessage("Email verified. Sign in to continue.");
+                  }} />
                   <button type="button" disabled={busy} onClick={() => { setVerificationEmail(""); setError(""); setSuccessMessage(""); }} className="w-full rounded-lg bg-[#016a61] py-3 text-sm font-semibold text-white hover:bg-[#005049] disabled:opacity-60">
                     Return to sign in
                   </button>
@@ -386,7 +360,10 @@ export default function LoginModal({
                       type="email"
                       required
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setLoginNeedsVerification(false);
+                      }}
                       placeholder="alex.smith@university.edu"
                       className="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-[#001142] transition-all bg-slate-50/50"
                     />
@@ -454,9 +431,9 @@ export default function LoginModal({
                   >
                     {resetLoading ? "Sending reset link..." : "Forgot password?"}
                   </button>
-                  <button type="button" onClick={handleResendVerification} disabled={busy || resendCooldown > 0} className="text-xs font-semibold text-[#016a61] hover:text-[#005049] disabled:opacity-60">
-                    {resendLoading ? "Sending verification email..." : resendCooldown > 0 ? `Resend verification in ${resendCooldown}s` : "Resend verification email"}
-                  </button>
+                  {loginNeedsVerification && <button type="button" onClick={() => { setVerificationEmail(email.trim()); setResendCooldown(0); setError(""); setSuccessMessage(""); }} disabled={busy} className="text-xs font-semibold text-[#016a61] hover:text-[#005049] disabled:opacity-60">
+                    Enter verification code
+                  </button>}
                 </div>
               )}
 
@@ -471,6 +448,7 @@ export default function LoginModal({
                     disabled={busy}
                     onClick={() => {
                       setMode(mode === "login" ? "register" : "login");
+                      setLoginNeedsVerification(false);
                       setError("");
                       setSuccessMessage("");
                     }}

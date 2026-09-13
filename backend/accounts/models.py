@@ -11,6 +11,10 @@ def student_photo_path(instance, filename):
     return randomized_upload_path("student-photos", filename)
 
 
+def recruiter_photo_path(instance, filename):
+    return randomized_upload_path("recruiter-photos", filename)
+
+
 def student_resume_path(instance, filename):
     return randomized_upload_path("student-resumes", filename)
 
@@ -49,6 +53,14 @@ class Skill(models.Model):
         return self.name
 
 
+class EmailVerificationCode(models.Model):
+    email_address = models.OneToOneField("account.EmailAddress", on_delete=models.CASCADE, related_name="verification_code")
+    code_hash = models.CharField(max_length=128)
+    expires_at = models.DateTimeField()
+    sent_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+
+
 class StudentProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="student_profile")
@@ -79,6 +91,10 @@ class RecruiterProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="recruiter_profile")
     name = models.CharField(max_length=255)
+    job_title = models.CharField(max_length=120, blank=True)
+    phone = models.CharField(max_length=40, blank=True)
+    bio = models.TextField(blank=True)
+    photo = models.ImageField(upload_to=recruiter_photo_path, validators=[validate_image], blank=True)
     approval_status = models.CharField(max_length=20, choices=Approval.choices, default=Approval.PENDING)
     rejection_reason = models.TextField(blank=True)
     reviewed_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="reviewed_recruiters")

@@ -13,6 +13,7 @@ export interface User {
   };
   profile: {
     name: string;
+    photo_url?: string | null;
     is_complete?: boolean;
     approval_status?: string;
     rejection_reason?: string;

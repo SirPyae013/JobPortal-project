@@ -47,10 +47,12 @@ class CsrfView(APIView):
 
 def public_image(request, path):
     """Serve local public imagery without exposing private resume folders."""
-    if not any(path.startswith(f"{prefix}/") for prefix in ("student-photos", "company-logos")):
+    folder, separator, relative_path = path.partition("/")
+    if not separator or folder not in ("student-photos", "recruiter-photos", "company-logos"):
         raise Http404
     try:
-        filename = safe_join(settings.MEDIA_ROOT, path)
+        filename = safe_join(settings.MEDIA_ROOT, folder)
+        filename = safe_join(filename, relative_path)
     except SuspiciousFileOperation as exc:
         raise Http404 from exc
     if not Path(filename).is_file():
