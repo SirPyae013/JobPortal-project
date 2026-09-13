@@ -24,7 +24,13 @@ ALLOWED_HOSTS = [item.strip() for item in os.getenv("DJANGO_ALLOWED_HOSTS", "loc
 render_hostname = os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
 if render_hostname and render_hostname not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(render_hostname)
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "https://jobportal-frontend.shinzo0864.workers.dev" if render_hostname else "http://localhost:3000",
+).rstrip("/")
 CSRF_TRUSTED_ORIGINS = [item.strip() for item in os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if item.strip()]
+if render_hostname and FRONTEND_URL not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(FRONTEND_URL)
 CORS_ALLOWED_ORIGINS = [item.strip() for item in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if item.strip()]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -224,7 +230,6 @@ EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "15"))
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Job Portal <no-reply@example.com>")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = not DEBUG

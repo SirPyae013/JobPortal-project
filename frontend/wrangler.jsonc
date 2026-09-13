@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "jobportal-frontend",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "keep_vars": true,
+  "build": { "command": "npm run build" },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api", "/api/*", "/accounts", "/accounts/*",
+      "/media", "/media/*", "/admin", "/admin/*", "/static/*"
+    ]
+  },
+  "vars": {
+    "BACKEND_ORIGIN": "https://jobportal-project-didk.onrender.com"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1,
+    "redact_query_string": true
+  }
+}

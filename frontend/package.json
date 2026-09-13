@@ -8,7 +8,10 @@
     "build": "vite build",
     "start": "vite --host 0.0.0.0",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit && tsc --project tsconfig.worker.json",
+    "cf:types": "wrangler types",
+    "deploy": "wrangler deploy",
+    "test:worker": "node --experimental-strip-types --test tests/worker.test.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
