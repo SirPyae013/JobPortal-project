@@ -1,8 +1,38 @@
 node_modules/
+<<<<<<< HEAD
 build/
 dist/
 coverage/
+=======
+.venv/
+build/
+dist/
+coverage/
+backend/db.sqlite3
+backend/media/
+backend/staticfiles/
+**/__pycache__/
+*.py[cod]
+>>>>>>> main
 .DS_Store
 *.log
 .env*
 !.env.example
+<<<<<<< HEAD
+=======
+
+# Local report deliverables and their working files
+/reports/
+
+# Tool caches and temporary editor files
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.tsbuildinfo
+*.tmp
+*.swp
+*.swo
+~$*
+Thumbs.db
+Desktop.ini
+>>>>>>> main
