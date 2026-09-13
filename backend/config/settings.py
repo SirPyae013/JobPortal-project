@@ -20,13 +20,20 @@ DEBUG = env_bool("DJANGO_DEBUG", True)
 DEV_SECRET_KEY = "dev-only-change-me-use-env-in-production"
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", DEV_SECRET_KEY)
 ALLOWED_HOSTS = [item.strip() for item in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if item.strip()]
+# Render supplies this exact hostname for the deployed web service.
+render_hostname = os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
+if render_hostname and render_hostname not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_hostname)
 CSRF_TRUSTED_ORIGINS = [item.strip() for item in os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if item.strip()]
 CORS_ALLOWED_ORIGINS = [item.strip() for item in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if item.strip()]
 CORS_ALLOW_CREDENTIALS = True
 
 if not DEBUG:
     required = ("DJANGO_SECRET_KEY", "DATABASE_URL", "DJANGO_ALLOWED_HOSTS", "CSRF_TRUSTED_ORIGINS", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "EMAIL_HOST", "EMAIL_HOST_USER", "EMAIL_HOST_PASSWORD", "AWS_STORAGE_BUCKET_NAME")
-    missing = [name for name in required if not os.getenv(name)]
+    missing = [
+        name for name in required
+        if not os.getenv(name) and not (name == "DJANGO_ALLOWED_HOSTS" and render_hostname)
+    ]
     if missing:
         raise ImproperlyConfigured(f"Missing production settings: {', '.join(missing)}")
     if SECRET_KEY == DEV_SECRET_KEY:
