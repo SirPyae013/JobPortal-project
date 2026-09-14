@@ -24,11 +24,16 @@ ALLOWED_HOSTS = [item.strip() for item in os.getenv("DJANGO_ALLOWED_HOSTS", "loc
 render_hostname = os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
 if render_hostname and render_hostname not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(render_hostname)
+DEPLOYED_FRONTEND_ORIGIN = "https://jobportal-frontend.shinzo0864.workers.dev"
 FRONTEND_URL = os.getenv(
     "FRONTEND_URL",
-    "https://jobportal-frontend.shinzo0864.workers.dev" if render_hostname else "http://localhost:3000",
+    DEPLOYED_FRONTEND_ORIGIN if render_hostname else "http://localhost:3000",
 ).rstrip("/")
 CSRF_TRUSTED_ORIGINS = [item.strip() for item in os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if item.strip()]
+# This application's deployed frontend remains trusted even when a stale
+# FRONTEND_URL or CSRF_TRUSTED_ORIGINS value still points to local development.
+if DEPLOYED_FRONTEND_ORIGIN not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(DEPLOYED_FRONTEND_ORIGIN)
 if render_hostname and FRONTEND_URL not in CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS.append(FRONTEND_URL)
 CORS_ALLOWED_ORIGINS = [item.strip() for item in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if item.strip()]
