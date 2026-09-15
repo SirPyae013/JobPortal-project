@@ -71,3 +71,15 @@ html[data-theme="dark"] .server-status-notice {
   border-color: #36584e;
   color: #a6e4cd;
 }
+@media(max-width:720px) {
+  .modern-app :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) { font-size:16px; min-width:0; max-width:100%; }
+  .modern-app [role="dialog"] { max-height:calc(100dvh - 24px); overflow-y:auto; }
+  .cm-workspace-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .cm-workspace-stats > a { min-width:0; overflow-wrap:anywhere; }
+  .cm-job-title, .cm-compensation, .cm-workspace-header > div { min-width:0; overflow-wrap:anywhere; }
+  .cm-card-footer { flex-wrap:wrap; gap:12px; }
+  .cm-card-footer .cm-apply { min-height:44px; }
+  .cm-recruiter #new-job-form { padding:14px; }
+  .cm-recruiter #new-job-form > * { min-width:0; }
+  .cm-recruiter #candidate-applications { max-width:100%; }
+}
