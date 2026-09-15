@@ -1,4 +1,5 @@
 import json
+from io import BytesIO
 from smtplib import SMTPException
 from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError, URLError
@@ -11,6 +12,16 @@ from .brevo_backend import EmailBackend
 
 @override_settings(BREVO_API_KEY="test-key", EMAIL_TIMEOUT=15)
 class BrevoBackendTests(SimpleTestCase):
+    @patch("accounts.brevo_backend.urlopen")
+    def test_logs_status_and_safe_code_without_provider_message(self, send):
+        send.side_effect = HTTPError("https://api.brevo.com", 403, "Forbidden", {}, BytesIO(json.dumps({"code": "permission_denied", "message": "private-recipient@example.com"}).encode()))
+        with self.assertLogs("accounts.brevo_backend", level="WARNING") as logs:
+            with self.assertRaises(SMTPException):
+                EmailBackend().send_messages([self.message()])
+        output = " ".join(logs.output)
+        self.assertIn("HTTP 403; code=permission_denied", output)
+        self.assertNotIn("private-recipient", output)
+
     def message(self):
         message = EmailMultiAlternatives("Verify email", "Code: 123456", "Portal <sender@example.com>", ["recipient@example.com"])
         message.attach_alternative("<p>Code: 123456</p>", "text/html")

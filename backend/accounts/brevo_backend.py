@@ -1,5 +1,6 @@
 """Transactional email over HTTPS, usable on Render's free instances."""
 import json
+import logging
 from email.utils import parseaddr
 from smtplib import SMTPException
 from urllib.error import HTTPError, URLError
@@ -7,6 +8,8 @@ from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
+
+logger = logging.getLogger(__name__)
 
 
 def address(value):
@@ -32,6 +35,7 @@ class EmailBackend(BaseEmailBackend):
     def _send(self, message):
         api_key = settings.BREVO_API_KEY
         if not api_key:
+            logger.warning("Brevo email failed: BREVO_API_KEY is missing.")
             raise SMTPException("BREVO_API_KEY is not configured.")
         # Account emails contain no attachments. Reject unsupported data rather
         # than reporting success after silently dropping it.
@@ -59,8 +63,20 @@ class EmailBackend(BaseEmailBackend):
                 if response.status != 201:
                     raise SMTPException("Email provider did not accept the message.")
         except HTTPError as error:
+            # Log only known machine-readable codes, never provider messages
+            # (which may contain email addresses or other private values).
+            code = "unknown"
+            try:
+                data = json.loads(error.read(8192))
+                candidate = data.get("code") if isinstance(data, dict) else None
+                if candidate in {"unauthorized", "permission_denied", "invalid_parameter", "missing_parameter", "not_enough_credits", "account_under_validation", "too_many_requests", "out_of_range", "method_not_allowed"}:
+                    code = candidate
+            except (ValueError, TypeError, OSError):
+                pass
+            logger.warning("Brevo email failed: HTTP %s; code=%s.", error.code, code)
             error.close()
             # Never surface provider response bodies, recipients or credentials.
             raise SMTPException(f"Email provider rejected the request (HTTP {error.code}).") from None
         except URLError:
+            logger.warning("Brevo email failed: HTTPS connection could not be established.")
             raise SMTPException("Email provider could not be reached.") from None
