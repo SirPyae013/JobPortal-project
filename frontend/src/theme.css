@@ -27,6 +27,8 @@ html[data-theme="dark"] .modern-app :is(h1,h2,h3,label) { color:#e5edf3; }
 html[data-theme="dark"] .modern-app :is([class*="text-[#016a61]"],[class*="text-teal-"]) { color:#86ddc6; }
 html[data-theme="dark"] .modern-app :is([class*="border-slate-"],[class*="border-teal-"]) { border-color:#36505a; }
 html[data-theme="dark"] .modern-app :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) { background-color:#14212a; border-color:#3b515b; color:#e5edf3; }
+html[data-theme="dark"] .cm-recruiter #new-job-form { background:#19262f; color:#e5edf3; }
+html[data-theme="dark"] .cm-recruiter #new-job-form :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) { background:#14212a; border-color:#3b515b; color:#e5edf3; }
 html[data-theme="dark"] .modern-app input::placeholder,html[data-theme="dark"] .modern-app textarea::placeholder { color:#90a4b4; }
 html[data-theme="dark"] .modern-app :is(.bg-teal-50,.bg-emerald-50,[class*="bg-[#eafaf7]"]) { background-color:#203d37; color:#b5e8d5; }
 html[data-theme="dark"] .modern-app :is(.bg-amber-50,.bg-red-50) { background-color:#3b2926; border-color:#6a4d40; }
