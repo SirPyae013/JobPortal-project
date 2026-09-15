@@ -57,3 +57,14 @@ class BrevoBackendTests(SimpleTestCase):
         with self.assertRaises(SMTPException):
             EmailBackend().send_messages([self.message()])
         send.assert_not_called()
+
+    @override_settings(DEFAULT_FROM_EMAIL="Job Portal")
+    @patch("accounts.brevo_backend.urlopen")
+    def test_invalid_sender_fails_before_request(self, send):
+        message = self.message()
+        message.from_email = "Job Portal"
+        with self.assertLogs("accounts.brevo_backend", level="WARNING") as logs:
+            with self.assertRaises(SMTPException):
+                EmailBackend().send_messages([message])
+        self.assertIn("configuration_invalid=DEFAULT_FROM_EMAIL", " ".join(logs.output))
+        send.assert_not_called()

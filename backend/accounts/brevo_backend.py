@@ -12,6 +12,19 @@ from django.core.mail.backends.base import BaseEmailBackend
 logger = logging.getLogger(__name__)
 
 
+SAFE_BREVO_ERROR_CODES = {
+    "unauthorized",
+    "permission_denied",
+    "invalid_parameter",
+    "missing_parameter",
+    "not_enough_credits",
+    "account_under_validation",
+    "too_many_requests",
+    "out_of_range",
+    "method_not_allowed",
+}
+
+
 def address(value):
     name, email = parseaddr(value)
     return {"email": email, **({"name": name} if name else {})}
@@ -35,13 +48,17 @@ class EmailBackend(BaseEmailBackend):
     def _send(self, message):
         api_key = settings.BREVO_API_KEY
         if not api_key:
-            logger.warning("Brevo email failed: BREVO_API_KEY is missing.")
+            logger.warning("Brevo email failed: configuration_missing=BREVO_API_KEY.")
             raise SMTPException("BREVO_API_KEY is not configured.")
         # Account emails contain no attachments. Reject unsupported data rather
         # than reporting success after silently dropping it.
         if message.attachments:
             raise SMTPException("Attachments are not supported by this email backend.")
-        payload = {"sender": address(message.from_email), "subject": message.subject}
+        sender = address(message.from_email)
+        if not sender["email"] or "@" not in sender["email"]:
+            logger.warning("Brevo email failed: configuration_invalid=DEFAULT_FROM_EMAIL.")
+            raise SMTPException("DEFAULT_FROM_EMAIL must include an email address.")
+        payload = {"sender": sender, "subject": message.subject}
         for field in ("to", "cc", "bcc"):
             values = getattr(message, field)
             if values:
@@ -61,6 +78,7 @@ class EmailBackend(BaseEmailBackend):
         try:
             with urlopen(request, timeout=settings.EMAIL_TIMEOUT) as response:
                 if response.status != 201:
+                    logger.warning("Brevo email failed: HTTP %s; code=unexpected_status.", response.status)
                     raise SMTPException("Email provider did not accept the message.")
         except HTTPError as error:
             # Log only known machine-readable codes, never provider messages
@@ -69,7 +87,7 @@ class EmailBackend(BaseEmailBackend):
             try:
                 data = json.loads(error.read(8192))
                 candidate = data.get("code") if isinstance(data, dict) else None
-                if candidate in {"unauthorized", "permission_denied", "invalid_parameter", "missing_parameter", "not_enough_credits", "account_under_validation", "too_many_requests", "out_of_range", "method_not_allowed"}:
+                if candidate in SAFE_BREVO_ERROR_CODES:
                     code = candidate
             except (ValueError, TypeError, OSError):
                 pass
