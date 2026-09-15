@@ -2,6 +2,28 @@ import type { Job, User } from "../types";
 
 const API_ROOT = "/api/v1";
 
+const slowRequests = new Set<symbol>();
+const requestListeners = new Set<() => void>();
+export const hasSlowRequest = () => slowRequests.size > 0;
+export function subscribeToSlowRequests(listener: () => void) {
+  requestListeners.add(listener);
+  return () => { requestListeners.delete(listener); };
+}
+
+async function trackedFetch(url: string, options: RequestInit) {
+  const id = Symbol();
+  const timer = setTimeout(() => {
+    slowRequests.add(id);
+    requestListeners.forEach(listener => listener());
+  }, 8000);
+  try {
+    return await fetch(url, options);
+  } finally {
+    clearTimeout(timer);
+    if (slowRequests.delete(id)) requestListeners.forEach(listener => listener());
+  }
+}
+
 export function dashboardRequest<T>(path: string, options: RequestInit = {}) {
   return request<T>(`/dashboard${path}`, options, false);
 }
@@ -47,7 +69,7 @@ function cookie(name: string) {
 let refreshRequest: Promise<void> | null = null;
 
 export async function ensureCsrf() {
-  await fetch(`${API_ROOT}/auth/csrf/`, { credentials: "include" });
+  await trackedFetch(`${API_ROOT}/auth/csrf/`, { credentials: "include" });
 }
 
 async function request<T>(path: string, options: RequestInit = {}, retry = true, responseType: "json" | "blob" = "json"): Promise<T> {
@@ -60,7 +82,7 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true,
     const token = cookie("csrftoken");
     if (token) headers.set("X-CSRFToken", decodeURIComponent(token));
   }
-  const response = await fetch(`${API_ROOT}${path}`, { ...options, headers, credentials: "include" });
+  const response = await trackedFetch(`${API_ROOT}${path}`, { ...options, headers, credentials: "include" });
   if (response.status === 401 && retry && !path.includes("/auth/login") && !path.includes("/auth/token/refresh")) {
     refreshRequest ||= request<void>("/auth/token/refresh/", { method: "POST" }, false).finally(() => {
       refreshRequest = null;

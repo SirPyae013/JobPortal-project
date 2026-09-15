@@ -9,7 +9,6 @@ import {
   fetchCompany,
   fetchCurrentUser,
   fetchMyJobs,
-  fetchStudents,
   updateApplicationStatus,
 } from "../services/api";
 
@@ -33,12 +32,6 @@ export default function RecruiterDashboard({ onEditProfile, onUserChange, postJo
   const [company, setCompany] = useState<any>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-  const [studentSearch, setStudentSearch] = useState("");
-  const [directoryQuery, setDirectoryQuery] = useState("");
-  const [directoryRevision, setDirectoryRevision] = useState(0);
-  const [directoryLoading, setDirectoryLoading] = useState(false);
-  const [directoryError, setDirectoryError] = useState("");
   const [error, setError] = useState("");
   const [showJobForm, setShowJobForm] = useState(false);
   const [downloadingResume, setDownloadingResume] = useState<string | null>(null);
@@ -85,23 +78,6 @@ export default function RecruiterDashboard({ onEditProfile, onUserChange, postJo
       .catch(error => { if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "Unable to load your hiring activity."); });
     return () => controller.abort();
   }, [approved]);
-  useEffect(() => {
-    if (!approved) { setStudents([]); return; }
-    const controller = new AbortController();
-    setDirectoryLoading(true);
-    setDirectoryError("");
-    setStudents([]);
-    fetchStudents(directoryQuery, true, controller.signal)
-      .then(students => { if (!controller.signal.aborted) setStudents(students); })
-      .catch(error => { if (!controller.signal.aborted) setDirectoryError(error instanceof Error ? error.message : "Unable to load students."); })
-      .finally(() => { if (!controller.signal.aborted) setDirectoryLoading(false); });
-    return () => controller.abort();
-  }, [approved, directoryQuery, directoryRevision]);
-  useEffect(() => {
-    const refresh = () => setDirectoryRevision(value => value + 1);
-    window.addEventListener("focus", refresh);
-    return () => window.removeEventListener("focus", refresh);
-  }, []);
   useEffect(() => {
     if (approved) return;
     const controller = new AbortController();
@@ -182,13 +158,13 @@ export default function RecruiterDashboard({ onEditProfile, onUserChange, postJo
       )}
 
       {approved && <div>
-        <header className="cm-workspace-header"><div><p className="cm-eyebrow">RECRUITER WORKSPACE</p><h1>Make your next great hire.</h1><p>{company.name} · Your jobs, candidates and campus talent in one place.</p></div><span className="cm-approved-tag"><Check size={15} aria-hidden="true" />Account approved</span></header>
+        <header className="cm-workspace-header"><div><p className="cm-eyebrow">RECRUITER WORKSPACE</p><h1>Make your next great hire.</h1><p>{company.name} · Your jobs and candidates in one place.</p></div><span className="cm-approved-tag"><Check size={15} aria-hidden="true" />Account approved</span></header>
         <div className="cm-workspace-stats">
           <a href="#posted-jobs"><BriefcaseBusiness aria-hidden="true" /><div><strong>{jobs.length}</strong><span>Job listings</span></div></a>
           <a href="#candidate-applications"><FileText aria-hidden="true" /><div><strong>{applications.length}</strong><span>Applications</span></div></a>
           <a href="#candidate-applications"><Users aria-hidden="true" /><div><strong>{applications.filter((application) => application.status === "submitted").length}</strong><span>Awaiting review</span></div></a>
         </div>
-        <nav className="cm-workspace-nav" aria-label="Recruiter sections"><a href="#posted-jobs">Job listings</a><a href="#candidate-applications">Applications</a><a href="#student-talent">Talent directory</a><button type="button" onClick={onEditProfile}>Recruiter profile</button></nav>
+        <nav className="cm-workspace-nav" aria-label="Recruiter sections"><a href="#posted-jobs">Job listings</a><a href="#candidate-applications">Applications</a><button type="button" onClick={onEditProfile}>Recruiter profile</button></nav>
       </div>}
 
       <section className="bg-white rounded-2xl border border-slate-100 p-6">
@@ -393,58 +369,6 @@ export default function RecruiterDashboard({ onEditProfile, onUserChange, postJo
               </tbody>
             </table>
             {!applications.length && <p className="mt-5 rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">Applications will appear here when students apply to your jobs.</p>}
-          </section>
-
-          <section id="student-talent" className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-            <h2 className="text-2xl font-bold text-[#001142]">
-              Student Talent Directory
-            </h2>
-            <p className="mt-2 text-sm text-slate-500">Active, email-verified students and their current profile details. Résumés submitted to your jobs are available in Candidate Applications above.</p>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                setDirectoryQuery(studentSearch.trim());
-                setDirectoryRevision(value => value + 1);
-              }}
-              className="cm-talent-search mt-4 flex gap-2"
-            >
-              <input
-                value={studentSearch}
-                aria-label="Search students by name, university or skill"
-                onChange={(event) => setStudentSearch(event.target.value)}
-                placeholder="Search name, university, or skill"
-                className="flex-1 rounded-lg border p-3"
-              />
-              <button className="rounded-lg bg-[#001142] px-5 text-white">
-                Search
-              </button>
-              <button type="button" disabled={directoryLoading} onClick={() => setDirectoryRevision(value => value + 1)} className="rounded-lg border border-slate-200 px-4 text-[#016a61] disabled:opacity-50">Refresh</button>
-            </form>
-            {directoryError && <p role="alert" className="mt-4 text-sm text-red-600">{directoryError}</p>}
-            {directoryLoading && <p role="status" className="mt-4 text-sm text-slate-500">Loading student profiles…</p>}
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              {students.map((student) => (
-                <article key={student.id} className="rounded-xl border p-4">
-                  <h3 className="font-bold text-[#001142]">{student.name || "Student"}</h3>
-                  <p className="text-sm text-slate-500">
-                    {student.university || "University not provided"} · {student.graduation_year || "Graduation year not provided"}
-                  </p>
-                  <p className="mt-2 text-xs text-[#425aa6]">
-                    {student.skills.join(", ") || "Skills not provided yet"}
-                  </p>
-                  {!student.is_complete && <p className="mt-2 text-xs text-amber-700">Profile in progress</p>}
-                  {student.has_resume ? <button
-                    type="button"
-                    disabled={downloadingResume !== null}
-                    onClick={() => handleDownloadResume("students", student.id, student.name)}
-                    className="mt-3 inline-block text-sm font-bold text-[#016a61] disabled:opacity-50"
-                  >
-                    {downloadingResume === student.id ? "Downloading…" : "Download profile résumé"}
-                  </button> : <p className="mt-3 text-sm text-slate-500">No résumé uploaded yet</p>}
-                </article>
-              ))}
-            </div>
-            {!directoryLoading && !directoryError && !students.length && <p className="mt-5 rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">{directoryQuery ? "No students match your search. Try a different name, university or skill." : "No active, email-verified student profiles are available yet."}</p>}
           </section>
         </>
       )}

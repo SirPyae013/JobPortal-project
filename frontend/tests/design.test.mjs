@@ -13,6 +13,45 @@ async function loadTypeScript(path) {
 const { selectJobs } = await loadTypeScript('../src/designs/modern/jobs.ts');
 const api = await loadTypeScript('../src/services/api.ts');
 
+test('slow server notice waits eight seconds and remains until all slow requests finish', async (context) => {
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  const pending = [];
+  context.mock.method(globalThis, 'fetch', () => new Promise(resolve => pending.push(resolve)));
+  let notifications = 0;
+  const unsubscribe = api.subscribeToSlowRequests(() => notifications++);
+  context.after(unsubscribe);
+  const first = api.ensureCsrf();
+  const second = api.ensureCsrf();
+  context.mock.timers.tick(7999);
+  assert.equal(api.hasSlowRequest(), false);
+  context.mock.timers.tick(1);
+  assert.equal(api.hasSlowRequest(), true);
+  pending[0](new Response());
+  await first;
+  assert.equal(api.hasSlowRequest(), true);
+  pending[1](new Response());
+  await second;
+  assert.equal(api.hasSlowRequest(), false);
+  assert.ok(notifications > 0);
+});
+
+test('fast responses and aborted requests leave no stale server notice', async (context) => {
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  context.mock.method(globalThis, 'fetch', async () => new Response());
+  await api.ensureCsrf();
+  context.mock.timers.tick(8000);
+  assert.equal(api.hasSlowRequest(), false);
+  let rejectRequest;
+  context.mock.method(globalThis, 'fetch', () => new Promise((resolve, reject) => { rejectRequest = reject; }));
+  const pending = api.ensureCsrf();
+  context.mock.timers.tick(8000);
+  assert.equal(api.hasSlowRequest(), true);
+  const rejected = assert.rejects(pending, { name: 'AbortError' });
+  rejectRequest(new DOMException('Aborted', 'AbortError'));
+  await rejected;
+  assert.equal(api.hasSlowRequest(), false);
+});
+
 const jobs = [
   { id: '2', title: 'Frontend Intern', company: 'Campus Co', jobType: 'Internship', industry: 'Computer Science', skills: ['React'], compensation: '100,000–900,000 MMK/month', compensationMin: '100000.00', createdAt: '2026-06-01T08:00:00Z' },
   { id: 'not-a-number', title: 'Analyst', company: 'Future Co', jobType: 'Full-Time', industry: 'Business', skills: ['Excel'], compensation: '300,000 MMK/month', compensationMin: 300000, createdAt: '2026-09-01T08:00:00Z' },

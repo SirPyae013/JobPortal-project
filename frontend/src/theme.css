@@ -46,3 +46,26 @@ html[data-theme="dark"] .admin-app :is(input,select) { color:#e5edf3; }
 html[data-theme="dark"] :is(.admin-login-card input,.admin-confirm input) { background:#14212a; border-color:#3b515b; }
 html[data-theme="dark"] .admin-app td { border-color:#30424b; }
 @media(max-width:420px) { .cm-account-actions { gap:6px; } .theme-toggle { width:34px; height:36px; } .cm-nav { gap:10px; } }
+.server-status-notice {
+  position: fixed;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  width: min(28rem, calc(100% - 2rem));
+  padding: 1rem 1.25rem;
+  border: 1px solid #99d5cc;
+  border-radius: 1rem;
+  background: #effcf8;
+  color: #164e46;
+  box-shadow: 0 8px 30px #00114220;
+  pointer-events: none;
+  font-size: .875rem;
+  line-height: 1.5;
+}
+.server-status-notice strong, .server-status-notice span { display: block; }
+html[data-theme="dark"] .server-status-notice {
+  background: #203d37;
+  border-color: #36584e;
+  color: #a6e4cd;
+}
