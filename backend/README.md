@@ -46,7 +46,7 @@ FRONTEND_URL=http://localhost:3000
 The SMTP login and sender address may be different. Use a sender authorized by the provider. For port 465, set `EMAIL_USE_SSL=true` and `EMAIL_USE_TLS=false`; do not enable both. Restart Django after changing `.env`. Keep passwords and keys in local configuration or deployment secrets, outside source control and chat.
 
 - **Gmail:** use `smtp.gmail.com` and the sending Google account as the login. The password must be a Google App Password from that same account. See [Google's App Password requirements](https://support.google.com/accounts/answer/185833?hl=en). If the feature is unavailable, another SMTP provider can be configured without changing application code.
-- **Brevo (alternative):** use `smtp-relay.brevo.com`, the SMTP login shown in its dashboard, and an SMTP key (not an API key). Complete the provider's sender/domain setup first. Check account availability for your location before committing to this provider. See [Brevo's SMTP setup instructions](https://help.brevo.com/hc/en-us/articles/7924908994450-Send-transactional-emails-using-Brevo-SMTP).
+- **Resend on Render:** Render Free blocks SMTP ports, so use the HTTPS backend described in [EMAIL_RENDER.md](EMAIL_RENDER.md). Resend requires a verified domain to deliver to users other than the Resend account owner.
 
 For password-reset links opened on another computer or phone, `FRONTEND_URL` must be the site's reachable origin, normally its public HTTPS URL. Email verification uses a code and has no such restriction.
 

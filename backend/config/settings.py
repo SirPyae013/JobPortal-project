@@ -41,8 +41,8 @@ CORS_ALLOW_CREDENTIALS = True
 
 if not DEBUG:
     required = ("DJANGO_SECRET_KEY", "DATABASE_URL", "DJANGO_ALLOWED_HOSTS", "CSRF_TRUSTED_ORIGINS", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "AWS_STORAGE_BUCKET_NAME")
-    if os.getenv("EMAIL_BACKEND") == "accounts.brevo_backend.EmailBackend":
-        required += ("BREVO_API_KEY", "DEFAULT_FROM_EMAIL")
+    if os.getenv("EMAIL_BACKEND") == "accounts.resend_backend.EmailBackend":
+        required += ("RESEND_API_KEY", "DEFAULT_FROM_EMAIL")
     else:
         required += ("EMAIL_HOST", "EMAIL_HOST_USER", "EMAIL_HOST_PASSWORD")
     missing = [
@@ -230,7 +230,7 @@ EMAIL_BACKEND = os.getenv(
     else "django.core.mail.backends.console.EmailBackend",
 )
 EMAIL_HOST = os.getenv("EMAIL_HOST", "")
-BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
