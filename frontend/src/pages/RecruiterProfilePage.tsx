@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft, Building2, Check, UserRound } from "lucide-react";
+import ImageWithFallback from "../components/ImageWithFallback";
 import {
   fetchCompany, fetchRecruiterProfile, resubmitCompany, updateCompany, updateRecruiterProfile,
   type Company, type RecruiterProfile,
@@ -36,7 +37,10 @@ export default function RecruiterProfilePage({ onBack, onProfileSaved, onCompany
   const logoInput = useRef<HTMLInputElement>(null);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
+  const [photoUnavailable, setPhotoUnavailable] = useState(false);
   const photoInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => setPhotoUnavailable(false), [savedProfile?.photo_url]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -154,11 +158,12 @@ export default function RecruiterProfilePage({ onBack, onProfileSaved, onCompany
 
       <div className="cm-profile-layout">
         <aside className="cm-profile-summary bg-white rounded-2xl border border-slate-200 p-6">
-          <div className="cm-profile-logo">{savedCompany.logo_url ? <img src={savedCompany.logo_url} alt={`${savedCompany.name} logo`} /> : <Building2 size={32} aria-hidden="true" />}</div>
+          <div className="cm-profile-logo"><ImageWithFallback src={savedCompany.logo_url} alt={`${savedCompany.name} logo`} fallback={<Building2 size={32} aria-hidden="true" />} /></div>
           <h2 className="mt-4 text-xl font-bold text-[#001142] break-words">{savedCompany.name}</h2>
           <p className="mt-1 text-sm text-slate-500 break-words">{[savedCompany.industry, savedCompany.location].filter(Boolean).join(" · ") || "Add your company details below."}</p>
           <div className="mt-6 border-t border-slate-200 pt-5">
-            <div className="cm-profile-photo mb-3">{savedProfile.photo_url ? <img src={savedProfile.photo_url} alt={`${savedProfile.name}'s profile photo`} /> : <UserRound size={28} aria-hidden="true" />}</div>
+            <div className="cm-profile-photo mb-3"><ImageWithFallback src={savedProfile.photo_url} alt={`${savedProfile.name}'s profile photo`} fallback={<UserRound size={28} aria-hidden="true" />} onLoadError={() => setPhotoUnavailable(true)} /></div>
+            {photoUnavailable && <p className="mb-3 text-xs text-slate-500">Saved photo unavailable. Upload it again below.</p>}
             <p className="font-semibold text-[#001142] break-words">{savedProfile.name}</p>
             <p className="mt-1 text-sm text-slate-500 break-words">{savedProfile.job_title || "Recruiter"}</p>
             <p className="mt-2 text-sm text-slate-500 break-all">{savedProfile.email}</p>
@@ -182,7 +187,7 @@ export default function RecruiterProfilePage({ onBack, onProfileSaved, onCompany
             <form onSubmit={saveProfile} className="mt-6">
               <fieldset disabled={savingProfile || resubmitting} className="grid min-w-0 gap-5 sm:grid-cols-2">
                 <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
-                  <div className="cm-profile-photo">{photoPreview || profile.photo_url ? <img src={photoPreview || profile.photo_url || ""} alt="Recruiter profile photo preview" /> : <UserRound size={32} aria-hidden="true" />}</div>
+                  <div className="cm-profile-photo"><ImageWithFallback src={photoPreview || profile.photo_url} alt="Recruiter profile photo preview" fallback={<UserRound size={32} aria-hidden="true" />} /></div>
                   <div className="min-w-0 flex-1">
                     <label className={labelClass} htmlFor="recruiter-photo">Profile photo</label>
                     <input id="recruiter-photo" ref={photoInput} type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="recruiter-photo-help" className="mt-2 block w-full text-xs" onChange={event => {
@@ -222,7 +227,7 @@ export default function RecruiterProfilePage({ onBack, onProfileSaved, onCompany
             <form onSubmit={saveCompany} className="mt-6">
               <fieldset disabled={savingCompany || resubmitting} className="grid min-w-0 gap-5 sm:grid-cols-2">
                 <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
-                  <div className="cm-profile-logo">{logoPreview || company.logo_url ? <img src={logoPreview || company.logo_url || ""} alt="Company logo preview" /> : <Building2 size={28} aria-hidden="true" />}</div>
+                  <div className="cm-profile-logo"><ImageWithFallback src={logoPreview || company.logo_url} alt="Company logo preview" fallback={<Building2 size={28} aria-hidden="true" />} /></div>
                   <label className={`${labelClass} min-w-0 flex-1`}>Company logo<input ref={logoInput} type="file" accept="image/png,image/jpeg,image/webp" className="mt-2 block w-full text-xs font-normal" onChange={event => {
                     const file = event.target.files?.[0];
                     setCompanyError("");

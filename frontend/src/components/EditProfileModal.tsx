@@ -7,6 +7,7 @@ import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Camera, FileText, Link, LoaderCircle, UserRound } from "lucide-react";
 import { fetchStudentProfile } from "../services/api";
+import ImageWithFallback from "./ImageWithFallback";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -182,15 +183,7 @@ export default function EditProfileModal({
                     <div className="flex items-center gap-4 rounded-xl border border-slate-100 bg-slate-50/70 p-4">
                       <div className="relative shrink-0">
                         <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-[#eff4ff] text-[#001142] shadow-sm">
-                          {photoPreviewUrl ? (
-                            <img
-                              src={photoPreviewUrl}
-                              alt="Profile preview"
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <UserRound className="h-9 w-9" />
-                          )}
+                          <ImageWithFallback src={photoPreviewUrl} alt="Profile preview" className="h-full w-full object-cover" fallback={<UserRound className="h-9 w-9" />} />
                         </div>
                         <label
                           htmlFor="profile-photo"

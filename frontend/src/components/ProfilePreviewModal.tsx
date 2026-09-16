@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import { BriefcaseBusiness, FileText, GraduationCap, UserRound, X } from "lucide-react";
+import ImageWithFallback from "./ImageWithFallback";
 
 export interface ProfilePreview {
   photoUrl: string;
@@ -74,11 +75,7 @@ export default function ProfilePreviewModal({
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-6 sm:p-7">
                 <div className="flex items-center gap-4 border-b border-slate-200 pb-6">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#001142] text-white">
-                    {profile.photoUrl ? (
-                      <img src={profile.photoUrl} alt={`${profile.name || "Student"}'s profile`} className="h-full w-full object-cover" />
-                    ) : (
-                      <UserRound className="h-7 w-7" />
-                    )}
+                    <ImageWithFallback src={profile.photoUrl} alt={`${profile.name || "Student"}'s profile`} className="h-full w-full object-cover" fallback={<UserRound className="h-7 w-7" />} />
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-[#001142]">

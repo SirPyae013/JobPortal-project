@@ -10,6 +10,8 @@ html[data-theme="dark"] .modern-app { --cm-navy:#e5edf3; --cm-teal:#74d3bb; --cm
 html[data-theme="dark"] .theme-toggle { color:#b5e6d6; border-color:#3b515b; }
 html[data-theme="dark"] .theme-toggle:hover { background:#263d43; }
 html[data-theme="dark"] :is(.cm-header,.cm-mobile-links) { background:#19262ff5; }
+html[data-theme="dark"] :is(.cm-icon-button:hover,.cm-mobile-links button:hover,.cm-mobile-links button[aria-current]) { background:#263d43; color:#a6e4cd; }
+html[data-theme="dark"] .cm-avatar { background:#28483e; color:#c3efdd; }
 html[data-theme="dark"] :is(.cm-discovery,.cm-search,.cm-filter-panel,.cm-job-card,.cm-empty,.cm-loading,.cm-workspace-stats>a,.cm-skip-link,.cm-apply) { background:#19262f; border-color:#30424b; }
 html[data-theme="dark"] :is(.cm-brand small,.cm-desktop-links button,.cm-account-name small,.cm-icon-button,.cm-intro-note,.cm-section-kicker,.cm-filter-hint,.cm-sort label,.cm-job-meta,.cm-role-details,.cm-compensation>span,.cm-footer,.cm-footer>span,.cm-workspace-stats span,.cm-workspace-nav) { color:#adbeca; }
 html[data-theme="dark"] :is(.cm-type-count,.cm-skills li,.cm-job-type,.cm-company-monogram) { background:#283944; border-color:#3b515b; color:#b9cad8; }
@@ -34,6 +36,8 @@ html[data-theme="dark"] .modern-app :is(.bg-teal-50,.bg-emerald-50,[class*="bg-[
 html[data-theme="dark"] .modern-app :is(.bg-amber-50,.bg-red-50) { background-color:#3b2926; border-color:#6a4d40; }
 html[data-theme="dark"] .modern-app :is([class*="text-amber-"],[class*="text-red-"]) { color:#ffbda6; }
 html[data-theme="dark"] .modern-app [class*="text-emerald-"] { color:#a6e4cd; }
+html[data-theme="dark"] :is(.cm-mobile-filter-toggle,.cm-profile-photo,.cm-profile-logo) { background:#19262f; border-color:#36505a; color:#a6e4cd; }
+html[data-theme="dark"] .cm-filter-count { background:#203d37; color:#a6e4cd; }
 /* Administration shares the same saved theme. */
 html[data-theme="dark"] .admin-app { --green:#83d7bd; --ink:#e5edf3; --muted:#a8bac3; --line:#34464e; background:#10191f; }
 html[data-theme="dark"] :is(.admin-sidebar,.admin-topbar,.admin-login-card,.admin-panel,.admin-table-panel,.admin-stats button,.admin-dialog,.admin-secondary,.admin-toolbar select) { background:#19262f; }
@@ -47,6 +51,11 @@ html[data-theme="dark"] .admin-queue b { background:#443c24; color:#f1d391; }
 html[data-theme="dark"] .admin-app :is(input,select) { color:#e5edf3; }
 html[data-theme="dark"] :is(.admin-login-card input,.admin-confirm input) { background:#14212a; border-color:#3b515b; }
 html[data-theme="dark"] .admin-app td { border-color:#30424b; }
+html[data-theme="dark"] .admin-login { background:radial-gradient(ellipse at top left,#1e3c37,transparent 60%),#10191f; }
+html[data-theme="dark"] .admin-app :is(.admin-search,.admin-pagination button) { border-color:#34464e; }
+html[data-theme="dark"] .admin-app :is(.admin-search input,.admin-toolbar select,.admin-confirm input) { background:#14212a; color:#e5edf3; }
+html[data-theme="dark"] .admin-app :is(.admin-sidebar-footer,.admin-dialog>header,.admin-dialog>footer,.admin-toolbar) { border-color:#34464e; }
+html[data-theme="dark"] .admin-app .admin-stats button:hover { border-color:#6da990; }
 @media(max-width:420px) { .cm-account-actions { gap:6px; } .theme-toggle { width:34px; height:36px; } .cm-nav { gap:10px; } }
 .server-status-notice {
   position: fixed;
@@ -72,6 +81,10 @@ html[data-theme="dark"] .server-status-notice {
   color: #a6e4cd;
 }
 @media(max-width:720px) {
+  .cm-brand { min-width:0; }
+  .cm-account-actions { flex-shrink:0; }
+  .admin-topbar { gap:12px; }
+  .admin-topbar > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .modern-app :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) { font-size:16px; min-width:0; max-width:100%; }
   .modern-app [role="dialog"] { max-height:calc(100dvh - 24px); overflow-y:auto; }
   .cm-workspace-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }

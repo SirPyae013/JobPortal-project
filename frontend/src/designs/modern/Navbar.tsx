@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Bell, BriefcaseBusiness, LogOut, Menu, X } from "lucide-react";
 import LogoMark from "../../components/LogoMark";
 import ThemeToggle from "../../components/ThemeToggle";
+import ImageWithFallback from "../../components/ImageWithFallback";
 
 export interface NavbarProps {
   isLoggedIn: boolean;
@@ -75,7 +76,7 @@ export default function Navbar(props: NavbarProps) {
             <button type="button" className="cm-icon-button cm-notifications" onClick={act(props.onNotifications)} aria-label={`Notifications${props.unreadCount ? `, ${props.unreadCount} unread` : ""}`}>
               <Bell size={20} aria-hidden="true" />{props.unreadCount > 0 && <span>{props.unreadCount > 99 ? "99+" : props.unreadCount}</span>}
             </button>
-            <div className="cm-account"><span className="cm-avatar">{props.profilePhotoUrl ? <img src={props.profilePhotoUrl} alt="" /> : props.currentUserName.slice(0, 2).toUpperCase()}</span><span className="cm-account-name">{props.currentUserName}<small>{recruiter ? "Recruiter" : "Student"}</small></span></div>
+            <div className="cm-account"><span className="cm-avatar"><ImageWithFallback src={props.profilePhotoUrl} alt="" fallback={props.currentUserName.slice(0, 2).toUpperCase()} /></span><span className="cm-account-name">{props.currentUserName}<small>{recruiter ? "Recruiter" : "Student"}</small></span></div>
             <button type="button" className="cm-icon-button cm-desktop-logout" onClick={act(props.onLogout)} aria-label="Log out"><LogOut size={18} aria-hidden="true" /></button>
           </> : <>
             <button type="button" className="cm-sign-in" onClick={act(props.onLoginClick)}>Log in</button>
