@@ -23,9 +23,19 @@ html[data-theme="dark"] .cm-apply:hover { background:#087568; color:#fff; }
 html[data-theme="dark"] .cm-recruiter table th { background:#22323d; color:#bdcbd7; }
 html[data-theme="dark"] .cm-recruiter table tbody tr:hover { background:#243640; }
 /* Shared Tailwind forms, dialogs, and account pages. */
+/* Override the palette too: opacity variants and hover utilities must use dark
+   surfaces, not blend the original near-white colors into dark dialogs. */
+html[data-theme="dark"] .modern-app {
+  --color-slate-50:#19262f;
+  --color-slate-100:#22323d;
+  --color-slate-200:#30424b;
+  --color-blue-50:#223449;
+  --color-blue-100:#36516c;
+  --color-blue-700:#b6d6ff;
+}
 html[data-theme="dark"] .modern-app :is(.bg-white,.bg-slate-50,.bg-slate-100,[class~="bg-slate-50/50"]) { background-color:#19262f; }
 html[data-theme="dark"] .modern-app :is([class*="text-slate-"],[class*="text-[#001142]"],[class*="text-[#425aa6]"]) { color:#bdcbd7; }
-html[data-theme="dark"] .modern-app :is(h1,h2,h3,label) { color:#e5edf3; }
+html[data-theme="dark"] .modern-app :is(h1,h2,h3,label):not(.text-white) { color:#e5edf3; }
 html[data-theme="dark"] .modern-app :is([class*="text-[#016a61]"],[class*="text-teal-"]) { color:#86ddc6; }
 html[data-theme="dark"] .modern-app :is([class*="border-slate-"],[class*="border-teal-"]) { border-color:#36505a; }
 html[data-theme="dark"] .modern-app :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) { background-color:#14212a; border-color:#3b515b; color:#e5edf3; }
@@ -36,6 +46,13 @@ html[data-theme="dark"] .modern-app :is(.bg-teal-50,.bg-emerald-50,[class*="bg-[
 html[data-theme="dark"] .modern-app :is(.bg-amber-50,.bg-red-50) { background-color:#3b2926; border-color:#6a4d40; }
 html[data-theme="dark"] .modern-app :is([class*="text-amber-"],[class*="text-red-"]) { color:#ffbda6; }
 html[data-theme="dark"] .modern-app [class*="text-emerald-"] { color:#a6e4cd; }
+html[data-theme="dark"] .modern-app :is([class*="bg-[#eff4ff]"],.bg-brand-accent-light) { background-color:#223449; }
+html[data-theme="dark"] .modern-app :is([class*="bg-[#9defe3]"],[class~="bg-[#016a61]/10"]) { background-color:#203d37; }
+html[data-theme="dark"] .modern-app :is([class*="border-[#d3e4fe]"],[class*="border-[#9defe3]"],.border-white) { border-color:#36505a; }
+html[data-theme="dark"] .modern-app :is([class~="hover:bg-slate-50"],[class~="hover:bg-slate-100"],[class~="hover:bg-slate-200"]):hover { background-color:#30424b; }
+html[data-theme="dark"] .modern-app :is([class~="hover:text-[#005049]"],[class~="hover:text-slate-600"]):hover { color:#b5e8d5; }
+html[data-theme="dark"] .cm-job-card:nth-child(n) .cm-company-monogram { background:#283944; border-color:#3b515b; color:#b9cad8; }
+html[data-theme="dark"] .cm-card-footer { border-color:#30424b; }
 html[data-theme="dark"] :is(.cm-mobile-filter-toggle,.cm-profile-photo,.cm-profile-logo) { background:#19262f; border-color:#36505a; color:#a6e4cd; }
 html[data-theme="dark"] .cm-filter-count { background:#203d37; color:#a6e4cd; }
 /* Administration shares the same saved theme. */
@@ -46,6 +63,7 @@ html[data-theme="dark"] :is(.admin-sidebar nav button.active,.admin-sidebar nav 
 html[data-theme="dark"] :is(.admin-badge,.admin-bar) { background:#2a3e47; color:#c2d0d9; }
 html[data-theme="dark"] .admin-primary { background:#087568; color:white; }
 html[data-theme="dark"] .admin-primary:hover { background:#095c50; }
+html[data-theme="dark"] .admin-logo { background:#087568; color:#fff; }
 html[data-theme="dark"] :is(.admin-danger,.admin-app .admin-error) { background:#432d2b; border-color:#704842; color:#ffc0b6; }
 html[data-theme="dark"] .admin-queue b { background:#443c24; color:#f1d391; }
 html[data-theme="dark"] .admin-app :is(input,select) { color:#e5edf3; }
